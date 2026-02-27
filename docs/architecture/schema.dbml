@@ -1,0 +1,27 @@
+// FindMe MVP Database Schema
+
+Table users {
+  id uuid [primary key, note: 'Auto generated UUID']
+  username varchar [unique, not null]
+  public_key text [not null, note: 'DH public key for initial handshake']
+  created_at timestamp [default: `now()`]
+}
+
+Table friendships {
+  user_id_a uuid [ref: > users.id]
+  user_id_b uuid [ref: > users.id]
+  status varchar [note: '"pending" or "accepted"']
+  created_at timestamp
+
+  indexes {
+    (user_id_a, user_id_b) [unique, note: 'Prevents redundant friend requests']
+  }
+}
+
+Table encrypted_locations {
+  id uuid [primary key]
+  sender_id uuid [ref: > users.id, note: 'Whose location?']
+  receiver_id uuid [ref: > users.id, note: 'Who receives the location?']
+  encrypted_payload text [not null]
+  server_received_at timestamp [default: `now()`]
+}
