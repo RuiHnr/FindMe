@@ -109,7 +109,7 @@ class LocationService : Service() {
 
     // only needed for bound services (not used here)
     override fun onBind(p0: Intent?): IBinder? {
-        return null;
+        return null
     }
 
 }
