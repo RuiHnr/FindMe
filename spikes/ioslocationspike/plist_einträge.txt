@@ -1,0 +1,10 @@
+<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+<string>FindMe needs your location in the background to share it encrypted with your friends, also while the app is closed.</string>
+
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>FindMe needs your location to display yourself on the map.</string>
+
+<key>UIBackgroundModes</key>
+<array>
+    <string>location</string>
+</array>
