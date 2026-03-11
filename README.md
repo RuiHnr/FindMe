@@ -27,7 +27,7 @@ To achieve the performance and privacy constraints, the project rejects heavy cr
 
 ## 4. Phased Execution Strategy
 
-### Phase 1: Architecture & Cryptography Design (Current)
+### Phase 1: Architecture & Cryptography Design
 * Define the End-to-End Encryption (E2EE) concept.
 * Design the public-key cryptography protocol for secure location sharing without server-side decryption.
 * Design database schemas (users, encrypted location blobs, friendship relations).
@@ -42,7 +42,7 @@ To achieve the performance and privacy constraints, the project rejects heavy cr
 * *Do not proceed to Phase 4 until this spike is successful.*
 
 ### Phase 4: Implementation
-* Set up the Rust Backend and PostgreSQL database.
+* Set up the Rust Backend and PostgreSQL database. **(Current)**
 * Implement the KMP shared logic (Cryptography & Networking).
 * Build the native UI layers and integrate the interactive map (e.g., Mapbox or native Apple/Google Maps).
 

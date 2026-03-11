@@ -18,10 +18,10 @@ Table friendships {
   }
 }
 
-Table encrypted_locations {
+Table location_inbox {
   id uuid [primary key]
   sender_id uuid [ref: > users.id, note: 'Whose location?']
   receiver_id uuid [ref: > users.id, note: 'Who receives the location?']
   encrypted_payload text [not null]
-  server_received_at timestamp [default: `now()`]
+  created_at timestamp [default: `now()`]
 }
