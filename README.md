@@ -32,14 +32,9 @@ To achieve the performance and privacy constraints, the project rejects heavy cr
 * Design the public-key cryptography protocol for secure location sharing without server-side decryption.
 * Design database schemas (users, encrypted location blobs, friendship relations).
 
-### Phase 2: UX & Permission Flows
+### Phase 2: UX & Permission Flows (Android first, IOS later)
 * Wireframe the core map and friend list screens.
 * Design a highly transparent onboarding flow to explain to users *why* "Always Allow" location permissions are required, mitigating App Store rejection risks.
-
-### Phase 3: Technical Spike (Feasibility Test)
-* Build a bare-bones native prototype (no UI, just logs).
-* **Goal:** Successfully read background location every 10-15 minutes, encrypt it, and send it to a local test server while maintaining negligible battery drain.
-* *Do not proceed to Phase 4 until this spike is successful.*
 
 ### Phase 4: Implementation
 * Set up the Rust Backend and PostgreSQL database.
