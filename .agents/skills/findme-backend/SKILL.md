@@ -15,7 +15,7 @@ This skill provides context and instructions for developing, testing, and expand
 
 ## Codebase Modules
 - `src/main.rs`: Entry point. Connects to PostgreSQL, initializes DB schema, configures Axum router, starts TCP listener on port 3000.
-- `src/db.rs`: Database layer functions (`init_db`, `create_user`, `insert_location`, `fetch_inbox`).
+- `src/db.rs`: Database layer functions (`init_db`, `create_user`, `insert_location`, `get_inbox`).
 - `src/handlers.rs`: HTTP request handlers converting HTTP JSON inputs/parameters into DB actions and returning Axum HTTP responses.
 - `src/models.rs`: Serde DTOs (`RegisterRequest`, `RegisterResponse`, `LocationPayload`, `InboxMessage`).
 

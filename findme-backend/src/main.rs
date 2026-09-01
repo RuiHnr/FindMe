@@ -1,15 +1,28 @@
 mod models;
 pub mod handlers;
 pub mod db;
+pub mod auth;
 
 use axum::{
     routing::{get, post},
-    Router
+    Router,
 };
+use axum::middleware::from_fn_with_state;
 use sqlx::{postgres::PgPoolOptions};
+use crate::auth::auth_middleware;
+
+#[derive(Clone)]
+pub struct AppState {
+    pub db: sqlx::PgPool,
+    pub jwt_secret: String,
+}
 
 #[tokio::main]
 async fn main() {
+    // ===== SECRET KEY SETUP =====
+    let jwt_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_|
+    "super_secret_dev_key".to_string());
+
     // ===== DB-SETUP =====
 
     // Build connection to DB (Connection Pool)
@@ -24,19 +37,27 @@ async fn main() {
 
     db::init_db(&pool).await;
 
+    let state = AppState {
+        db: pool,
+        jwt_secret,
+    };
+
     // ===== API-SETUP =====
 
     // 1. Define Endpoints
     let app = Router::new()
+
+        .route("/inbox/{receiver_id}", get(handlers::get_inbox))
+
+        .route_layer(from_fn_with_state(state.clone(), auth_middleware))
+
         .route("/", get(|| async { "Welcome to the FindMe Server! (Status: Online)" }))
 
         .route("/users/register", post(handlers::register_user))
 
         .route("/inbox", post(handlers::receive_location))
 
-        .route("/inbox/{receiver_id}", get(handlers::fetch_inbox))
-
-        .with_state(pool);
+        .with_state(state);
 
     // 2. On which port does the server listen?
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();

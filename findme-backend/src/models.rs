@@ -25,5 +25,13 @@ pub struct RegisterRequest {
 /// The Register Response sent from the server
 #[derive(Serialize, Debug)]
 pub struct RegisterResponse {
-    pub user_id: Uuid
+    pub user_id: Uuid,
+    pub token: String,
+}
+
+/// Data payload inside JWT token
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Claims {
+    pub sub: Uuid,  // Subject: The user's UUID
+    pub exp: usize  // Expiration time (Unix timestamp)
 }
