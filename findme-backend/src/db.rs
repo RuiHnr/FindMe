@@ -2,36 +2,6 @@ use sqlx::PgPool;
 use uuid::Uuid;
 use crate::models::{InboxMessage, LocationPayload, RegisterRequest};
 
-/// Function to initialize all DB Tables (to be changed later)
-pub async fn init_db(pool: &PgPool) {
-    // Users Table
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS users (
-                id UUID PRIMARY KEY,
-                username VARCHAR(255) UNIQUE NOT NULL,
-                public_key TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );"
-    )
-        .execute(pool)
-        .await
-        .expect("Couldn't create Inbox Table!");
-    
-    // Inbox Table
-    sqlx::query(
-    "CREATE TABLE IF NOT EXISTS location_inbox (
-            id UUID PRIMARY KEY,
-            sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            receiver_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            encrypted_payload TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );"
-    )
-        .execute(pool)
-        .await
-        .expect("Couldn't create Inbox Table!");
-}
-
 /// Insert a new user into users Table, returning the user's ID
 pub async fn create_user(
     pool: &PgPool,

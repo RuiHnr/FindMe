@@ -1,15 +1,15 @@
-mod models;
-pub mod handlers;
-pub mod db;
 pub mod auth;
+pub mod db;
+pub mod handlers;
+mod models;
 
-use axum::{
-    routing::{get, post},
-    Router,
-};
-use axum::middleware::from_fn_with_state;
-use sqlx::{postgres::PgPoolOptions};
 use crate::auth::auth_middleware;
+use axum::middleware::from_fn_with_state;
+use axum::{
+    Router,
+    routing::{get, post},
+};
+use sqlx::postgres::PgPoolOptions;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -19,24 +19,32 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() {
+    dotenvy::dotenv().ok();
+
     // ===== SECRET KEY SETUP =====
-    let jwt_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_|
-    "super_secret_dev_key".to_string());
+    let jwt_secret =
+        std::env::var("JWT_SECRET").expect("JWT_SECRET must be set in your .env file!");
 
     // ===== DB-SETUP =====
 
     // Build connection to DB (Connection Pool)
-    let db_url = "postgres://findme:supersecret@localhost:5432/findme_db";
+    let db_url =
+        std::env::var("DATABASE_URL").expect("DATABASE_URL must be set in your .env file!");
+
     let pool = PgPoolOptions::new()
         .max_connections(5)
-        .connect(db_url)
+        .connect(&db_url)
         .await
         .expect("Couldn't connect to DB! Is the Docker Container running?");
 
     println!("✅ Successfully connected to PostgresSQL!");
 
-    db::init_db(&pool).await;
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .expect("Failed to run database migrations");
 
+    // Define App State
     let state = AppState {
         db: pool,
         jwt_secret,
@@ -46,17 +54,14 @@ async fn main() {
 
     // 1. Define Endpoints
     let app = Router::new()
-
         .route("/inbox/{receiver_id}", get(handlers::get_inbox))
-
         .route_layer(from_fn_with_state(state.clone(), auth_middleware))
-
-        .route("/", get(|| async { "Welcome to the FindMe Server! (Status: Online)" }))
-
+        .route(
+            "/",
+            get(|| async { "Welcome to the FindMe Server! (Status: Online)" }),
+        )
         .route("/users/register", post(handlers::register_user))
-
         .route("/inbox", post(handlers::receive_location))
-
         .with_state(state);
 
     // 2. On which port does the server listen?

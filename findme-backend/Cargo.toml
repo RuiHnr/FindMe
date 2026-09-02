@@ -18,3 +18,5 @@ uuid = { version = "1.8", features = ["v4", "serde"] }
 jsonwebtoken = "11.0.0"
 # for time
 chrono = "0.4.44"
+
+dotenvy = "0.15"
