@@ -1,0 +1,56 @@
+### Register Alice
+POST http://127.0.0.1:3000/users/register
+Content-Type: application/json
+
+{
+  "username": "alice3",
+  "pub_key": "alice_public_key_abc123"
+}
+
+> {%
+    // This script automatically saves Alice's token and ID as variables!
+    client.global.set("alice_token", response.body.token);
+    client.global.set("alice_id", response.body.user_id);
+%}
+
+### Register Bob
+POST http://127.0.0.1:3000/users/register
+Content-Type: application/json
+
+{
+  "username": "bob3",
+  "pub_key": "bob_public_key_xyz890"
+}
+
+> {%
+    // This script automatically saves Bob's token and ID as variables!
+    client.global.set("bob_token", response.body.token);
+    client.global.set("bob_id", response.body.user_id);
+%}
+
+### Alice sends friend request to Bob
+POST http://127.0.0.1:3000/friends/requests
+Authorization: Bearer {{alice_token}}
+Content-Type: application/json
+
+{
+  "target_username": "bob3"
+}
+
+### Bob accepts Alice's friend request
+PUT http://127.0.0.1:3000/friends/requests/{{alice_id}}/accept
+Authorization: Bearer {{bob_token}}
+
+### Alice sends a location to Bob
+POST http://127.0.0.1:3000/inbox
+Authorization: Bearer {{alice_token}}
+Content-Type: application/json
+
+{
+  "receiver_id": "{{bob_id}}",
+  "encrypted_blob": "super_secret_location_data_for_bob"
+}
+
+### Bob checks his inbox
+GET http://127.0.0.1:3000/inbox/{{bob_id}}
+Authorization: Bearer {{bob_token}}

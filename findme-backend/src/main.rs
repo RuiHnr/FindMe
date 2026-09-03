@@ -1,21 +1,5 @@
-pub mod auth;
-pub mod db;
-pub mod handlers;
-mod models;
-
-use crate::auth::auth_middleware;
-use axum::middleware::from_fn_with_state;
-use axum::{
-    Router,
-    routing::{get, post},
-};
+use findme_backend::{AppState, build_router};
 use sqlx::postgres::PgPoolOptions;
-
-#[derive(Clone)]
-pub struct AppState {
-    pub db: sqlx::PgPool,
-    pub jwt_secret: String,
-}
 
 #[tokio::main]
 async fn main() {
@@ -53,16 +37,7 @@ async fn main() {
     // ===== API-SETUP =====
 
     // 1. Define Endpoints
-    let app = Router::new()
-        .route("/inbox/{receiver_id}", get(handlers::get_inbox))
-        .route_layer(from_fn_with_state(state.clone(), auth_middleware))
-        .route(
-            "/",
-            get(|| async { "Welcome to the FindMe Server! (Status: Online)" }),
-        )
-        .route("/users/register", post(handlers::register_user))
-        .route("/inbox", post(handlers::receive_location))
-        .with_state(state);
+    let app = build_router(state);
 
     // 2. On which port does the server listen?
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();

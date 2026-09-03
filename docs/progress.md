@@ -43,15 +43,15 @@ FindMe is currently in **Phase 4: Implementation** of its roadmap.
 
 ### Priority 2: Database Schema & Migration Tooling
 
-- [ ] **`sqlx` Migrations Setup:**
+- [x] **`sqlx` Migrations Setup:**
     - Transition from dynamic runtime initialization in `db::init_db()` to managed `sqlx` migration files
       (`findme-backend/migrations/`).
     - Create baseline migration `0001_init_schema.sql` based on `schema.dbml`.
-- [ ] **Friendship System Implementation:**
+- [x] **Friendship System Implementation:**
     - Implement DB table `friendships` (`user_id_a`, `user_id_b`, `status` ['pending', 'accepted'], `created_at`).
     - Create HTTP endpoints:
-        - `POST /friends/request`
-        - `PUT /friends/accept`
+        - `POST /friends/requests`
+        - `PUT /friends/requests/:id/accept`
     - Enforce friendship checks in `POST /inbox` so location payloads can only be sent to accepted friends.
 
 ### Priority 3: Mobile Client Integration (KMP)
