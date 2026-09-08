@@ -18,10 +18,30 @@ Table friendships {
   }
 }
 
-Table encrypted_locations {
+Table location_inbox {
   id uuid [primary key]
   sender_id uuid [ref: > users.id, note: 'Whose location?']
   receiver_id uuid [ref: > users.id, note: 'Who receives the location?']
   encrypted_payload text [not null]
-  server_received_at timestamp [default: `now()`]
+  created_at timestamp [default: `now()`]
 }
+
+Table signed_prekeys {
+  user_id uuid [pk, ref: - users.id, note: 'Signal Signed PreKey owner']
+  key_id integer [not null]
+  public_key text [not null]
+  signature text [not null, note: 'Signed by users.public_key (Identity Key)']
+  created_at timestamp [default: `now()`]
+}
+
+Table onetime_prekeys {
+  user_id uuid [ref: > users.id, note: 'Signal One-Time PreKey pool']
+  key_id integer [not null]
+  public_key text [not null]
+  created_at timestamp [default: `now()`]
+
+  indexes {
+    (user_id, key_id) [pk]
+  }
+}
+

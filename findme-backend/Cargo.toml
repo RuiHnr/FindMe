@@ -1,0 +1,26 @@
+[package]
+name = "findme-backend"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Axum as Web-Framework
+axum = { version = "0.8.8", features = ["macros"] }
+# Tokio as asynchrous runtime env
+tokio = { version = "1.36", features = ["full"] }
+# Serde for JSON-Parsing
+serde = { version = "1.0", features = ["derive"] }
+# sqlx as asynchonous DB-Driver
+sqlx = { version = "0.9.0", features = ["runtime-tokio", "tls-native-tls", "postgres", "uuid", "chrono"] }
+# UUID Lib
+uuid = { version = "1.8", features = ["v4", "serde"] }
+# JWT Lib
+jsonwebtoken = { version = "11.0.0", features = ["rust_crypto"] }
+# for time
+chrono = "0.4.44"
+# for .env
+dotenvy = "0.15"
+
+[dev-dependencies]
+axum-test = "21.0.0"
+tokio = { version = "1.36", features = ["macros", "rt-multi-thread"] }

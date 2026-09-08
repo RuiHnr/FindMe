@@ -1,0 +1,55 @@
+name: Backend CI
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'findme-backend/**'
+      - '.github/workflows/backend.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'findme-backend/**'
+      - '.github/workflows/backend.yml'
+  workflow_dispatch:
+jobs:
+  test:
+    name: Backend Lint & Test
+    runs-on: ubuntu-latest
+    # Service container providing PostgreSQL for sqlx integration tests
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: findme_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: findme-backend
+    env:
+      # Connection string pointing to the service container above
+      DATABASE_URL: postgres://postgres:password@localhost:5432/findme_test
+      JWT_SECRET: test_jwt_secret_ci_key
+      RUST_BACKTRACE: 1
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Rust Toolchain & Cache
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+          cache-work-dir: findme-backend
+      - name: Check code formatting
+        run: cargo fmt --all --check
+      - name: Lint with Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+      - name: Run Tests
+        run: cargo test --verbose
