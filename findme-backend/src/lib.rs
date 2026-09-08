@@ -26,6 +26,9 @@ pub fn build_router(state: AppState) -> Router {
             "/friends/requests/{id}/accept",
             put(handlers::accept_friend),
         )
+        .route("/keys", post(handlers::upload_keys))
+        .route("/keys/count", get(handlers::get_key_count))
+        .route("/keys/{user_id}", get(handlers::get_prekey_bundle))
         .route_layer(from_fn_with_state(state.clone(), auth_middleware))
         .route(
             "/",

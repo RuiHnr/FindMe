@@ -26,6 +26,7 @@ FindMe is currently in **Phase 4: Implementation** of its roadmap.
 - [x] **Rust Backend Initialization:** Setup Axum 0.8 server, Tokio runtime, and `sqlx` database pool.
 - [x] **Modular Refactoring:** Refactored backend codebase into decoupled handlers, database queries, and Serde data
   models.
+- [x] **Signal Protocol (X3DH) Backend Support:** Implemented migrations, models, DB queries, and endpoints (`POST /keys`, `GET /keys/{user_id}`, `GET /keys/count`) for Signed PreKeys and atomic One-Time PreKey distribution.
 
 ---
 
