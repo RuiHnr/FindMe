@@ -1,0 +1,68 @@
+# ====================================================================
+# FindMe Monorepo .gitignore
+# ====================================================================
+
+# --------------------------------------------------------------------
+# 1. OS & Editor / IDE Metadata
+# --------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+
+# JetBrains / Android Studio / RustRover
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+captures/
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# --------------------------------------------------------------------
+# 2. Kotlin Multiplatform & Android Build Artifacts
+# --------------------------------------------------------------------
+# Gradle files & caches
+.gradle/
+build/
+**/build/
+
+# Android Studio generated files
+local.properties
+.navigation/
+.cxx/
+.externalNativeBuild/
+
+# Android Signing / Keystores
+*.keystore
+*.jks
+!**/public-decode.keystore
+
+# Kotlin Native & Klib caches
+.kotlin/
+kotlin-js-store/
+
+# --------------------------------------------------------------------
+# 3. Rust Backend (findme-backend)
+# --------------------------------------------------------------------
+target/
+**/target/
+debug/
+**/*.rs.bk
+*.pdb
+**/mutants.out*/
+
+# Environment variables & secrets (Backend & Clients)
+.env
+.env.*
+!.env.example
+
+# --------------------------------------------------------------------
+# 4. Logs & Temp Artifacts
+# --------------------------------------------------------------------
+*.log
+*.tmp
