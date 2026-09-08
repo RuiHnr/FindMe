@@ -1,18 +1,19 @@
+use crate::AppState;
+use crate::models::Claims;
 use axum::extract::{Request, State};
 use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::IntoResponse;
-use jsonwebtoken::{decode, DecodingKey, Validation};
-use crate::AppState;
-use crate::models::Claims;
+use jsonwebtoken::{DecodingKey, Validation, decode};
 
 pub async fn auth_middleware(
     State(state): State<AppState>,
     mut req: Request,
-    next: Next
+    next: Next,
 ) -> Result<impl IntoResponse, StatusCode> {
     // 1. Get the auth header
-    let auth_header = req.headers()
+    let auth_header = req
+        .headers()
         .get("Authorization")
         .and_then(|h| h.to_str().ok())
         .ok_or(StatusCode::UNAUTHORIZED)?;
@@ -25,11 +26,8 @@ pub async fn auth_middleware(
 
     // 3. Decode the token
     let decoding_key = DecodingKey::from_secret(state.jwt_secret.as_bytes());
-    let token_data = decode::<Claims>(
-        token,
-        &decoding_key,
-        &Validation::default(),
-    ).map_err(|_| StatusCode::UNAUTHORIZED)?;
+    let token_data = decode::<Claims>(token, &decoding_key, &Validation::default())
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
 
     // 4. Inject the user ID into request extensions
     req.extensions_mut().insert(token_data.claims.sub);

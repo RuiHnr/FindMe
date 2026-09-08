@@ -8,8 +8,10 @@ async fn test_non_friend_cannot_send_location(pool: sqlx::PgPool) {
     let bob = app.create_user("bob", "key_b").await;
 
     // Try to send without being friends
-    let res = app.send_location(&alice.token, bob.user_id, "secret_blob").await;
-    
+    let res = app
+        .send_location(&alice.token, bob.user_id, "secret_blob")
+        .await;
+
     // Should be rejected
     assert_eq!(res.status_code(), StatusCode::FORBIDDEN);
 }

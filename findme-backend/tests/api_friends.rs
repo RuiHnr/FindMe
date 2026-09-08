@@ -40,7 +40,7 @@ async fn test_unauthenticated_request(pool: sqlx::PgPool) {
 
     // Try without a valid token
     let res = app.send_friend_request("invalid_token_123", "bob").await;
-    
+
     // We expect the auth_middleware to block this
     assert_eq!(res.status_code(), StatusCode::UNAUTHORIZED);
 }

@@ -82,4 +82,4 @@ pub struct PreKeyBundleResponse {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct KeyCountResponse {
     pub remaining_one_time_prekeys: i64,
-}
+}

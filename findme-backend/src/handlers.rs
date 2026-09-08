@@ -1,6 +1,5 @@
 use crate::models::{
-    Claims, FriendRequest, KeyCountResponse, RegisterRequest, RegisterResponse,
-    UploadKeysRequest,
+    Claims, FriendRequest, KeyCountResponse, RegisterRequest, RegisterResponse, UploadKeysRequest,
 };
 use crate::{AppState, db, models::SubmitLocationRequest};
 use axum::{
@@ -18,14 +17,15 @@ pub(crate) async fn register_user(
     State(state): State<AppState>,
     Json(payload): Json<RegisterRequest>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let user_id=  db::create_user(&state.db, &payload)
-        .await
-        .map_err(|e| {
+    let user_id = db::create_user(&state.db, &payload).await.map_err(|e| {
         eprintln!("DB-Error while registering: {}", e);
         StatusCode::BAD_REQUEST
     })?;
 
-    println!("Successfully registered user: {} (ID: {})", payload.username, user_id);
+    println!(
+        "Successfully registered user: {} (ID: {})",
+        payload.username, user_id
+    );
 
     // 1. Set expiration
     let expiration = Utc::now()
@@ -190,11 +190,16 @@ pub(crate) async fn get_key_count(
     Extension(authenticated_user): Extension<Uuid>,
 ) -> Result<impl IntoResponse, StatusCode> {
     match db::count_onetime_prekeys(&state.db, authenticated_user).await {
-        Ok(count) => Ok((StatusCode::OK, Json(KeyCountResponse { remaining_one_time_prekeys: count })).into_response()),
+        Ok(count) => Ok((
+            StatusCode::OK,
+            Json(KeyCountResponse {
+                remaining_one_time_prekeys: count,
+            }),
+        )
+            .into_response()),
         Err(e) => {
             eprintln!("DB-Error counting prekeys: {}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
 }
-

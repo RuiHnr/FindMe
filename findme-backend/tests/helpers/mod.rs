@@ -1,7 +1,11 @@
-use axum_test::{TestServer, TestResponse};
-use sqlx::PgPool;
+#![allow(dead_code)]
+
+use axum_test::{TestResponse, TestServer};
+use findme_backend::models::{
+    FriendRequest, RegisterRequest, RegisterResponse, SubmitLocationRequest,
+};
 use findme_backend::{AppState, build_router};
-use findme_backend::models::{RegisterRequest, RegisterResponse, FriendRequest, SubmitLocationRequest};
+use sqlx::PgPool;
 use uuid::Uuid;
 
 pub struct TestApp {
@@ -56,7 +60,12 @@ impl TestApp {
     }
 
     /// Helper to send a location payload to another user
-    pub async fn send_location(&self, token: &str, receiver_id: Uuid, payload: &str) -> TestResponse {
+    pub async fn send_location(
+        &self,
+        token: &str,
+        receiver_id: Uuid,
+        payload: &str,
+    ) -> TestResponse {
         self.server
             .post("/inbox")
             .add_header("Authorization", format!("Bearer {}", token))

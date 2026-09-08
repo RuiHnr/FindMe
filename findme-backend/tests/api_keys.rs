@@ -1,7 +1,7 @@
 mod helpers;
 use axum::http::StatusCode;
 use findme_backend::models::{
-    OneTimePreKeyDto, PreKeyBundleResponse, SignedPreKeyDto, UploadKeysRequest, KeyCountResponse
+    KeyCountResponse, OneTimePreKeyDto, PreKeyBundleResponse, SignedPreKeyDto, UploadKeysRequest,
 };
 
 #[sqlx::test]
