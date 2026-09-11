@@ -7,8 +7,9 @@ plugins {
 kotlin {
     android {
         namespace = "com.ruirui.findme.kmp"
-        compileSdk = 36
+        compileSdk = 37
         minSdk = 26
+        withHostTest { }
     }
 
     listOf(
@@ -26,14 +27,20 @@ kotlin {
         commonMain.dependencies {
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.kotlinx.json)
+            implementation(libs.ktor.client.auth)
         }
         androidMain.dependencies {
             implementation(libs.androidx.security.crypto)
             implementation("androidx.datastore:datastore-preferences:1.2.1")
+            implementation(libs.ktor.client.okhttp)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.test)
+            implementation(libs.ktor.client.mock)
         }
     }
 }
