@@ -87,11 +87,11 @@ FindMe/
 
 ### Step 6: Signal Protocol & Cryptography Engine (`commonMain/crypto`)
 
-- [ ] Implement Curve25519 / X25519 key generation (Identity Key, Signed PreKey, One-Time PreKeys).
-- [ ] Sign signed-prekey with Identity Key using Ed25519.
-- [ ] Implement X3DH key agreement calculation (initiator and receiver).
-- [ ] Implement Double Ratchet state machine for continuous forward secrecy.
-- [ ] Save ratchet state and keys to `SecureStorage`.
+- [x] Implement Curve25519 / X25519 key generation (Identity Key, Signed PreKey, One-Time PreKeys).
+- [x] Sign signed-prekey with Identity Key using Ed25519.
+- [x] Implement X3DH key agreement calculation (initiator and receiver).
+- [x] Implement Double Ratchet state machine for continuous forward secrecy.
+- [x] Save ratchet state and keys to `SecureStorage`.
 
 ### Step 7: Repository Layer & Reactive State (`commonMain/repository`)
 

@@ -33,7 +33,7 @@ class CryptoKotlinAdapter(private val provider: CryptographyProvider = Cryptogra
         return provider.get(HKDF)
             .secretDerivation(
                 digest = SHA256,
-                outputSize = 256.bits,
+                outputSize = (outLength * 8).bits,
                 salt = salt,
                 info = info
             )
