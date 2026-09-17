@@ -12,8 +12,10 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class RegisterRequest(
     val username: String,
-    @SerialName("pub_key")
-    val pubKey: String
+    @SerialName("identity_key_dh")
+    val identityKeyDh: String,
+    @SerialName("identity_key_sign")
+    val identityKeySign: String
 )
 
 /**

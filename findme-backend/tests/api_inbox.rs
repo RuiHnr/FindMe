@@ -4,8 +4,8 @@ use axum::http::StatusCode;
 #[sqlx::test]
 async fn test_non_friend_cannot_send_location(pool: sqlx::PgPool) {
     let app = helpers::spawn_app(pool).await;
-    let alice = app.create_user("alice", "key_a").await;
-    let bob = app.create_user("bob", "key_b").await;
+    let alice = app.create_user("alice", "key_a", "key_a").await;
+    let bob = app.create_user("bob", "key_b", "key_b").await;
 
     // Try to send without being friends
     let res = app
@@ -19,8 +19,8 @@ async fn test_non_friend_cannot_send_location(pool: sqlx::PgPool) {
 #[sqlx::test]
 async fn test_cannot_read_others_inbox(pool: sqlx::PgPool) {
     let app = helpers::spawn_app(pool).await;
-    let alice = app.create_user("alice", "key_a").await;
-    let bob = app.create_user("bob", "key_b").await;
+    let alice = app.create_user("alice", "key_a", "key_a").await;
+    let bob = app.create_user("bob", "key_b", "key_b").await;
 
     // Alice tries to read Bob's inbox
     let res = app.get_inbox(&alice.token, bob.user_id).await;

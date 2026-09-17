@@ -54,8 +54,10 @@ data class UploadKeysRequest(
 data class PreKeyBundleResponse(
     @SerialName("user_id")
     val userId: String,
-    @SerialName("identity_key")
-    val identityKey: String,
+    @SerialName("identity_key_dh")
+    val identityKeyDh: String,
+    @SerialName("identity_key_sign")
+    val identityKeySign: String,
     @SerialName("signed_prekey")
     val signedPreKey: SignedPreKeyDto,
     @SerialName("one_time_prekey")

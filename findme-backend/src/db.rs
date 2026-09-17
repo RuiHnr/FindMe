@@ -9,12 +9,13 @@ pub async fn create_user(pool: &PgPool, req: &RegisterRequest) -> Result<Uuid, s
     let new_user_id = Uuid::new_v4();
 
     sqlx::query(
-        "INSERT INTO users (id, username, public_key)
-         VALUES($1, $2, $3) RETURNING id;",
+        "INSERT INTO users (id, username, identity_key_dh, identity_key_sign)
+         VALUES($1, $2, $3, $4) RETURNING id;",
     )
     .bind(new_user_id)
     .bind(&req.username)
-    .bind(&req.pub_key)
+    .bind(&req.identity_key_dh)
+    .bind(&req.identity_key_sign)
     .execute(pool)
     .await?;
 
@@ -198,14 +199,14 @@ pub async fn fetch_prekey_bundle(
     pool: &PgPool,
     user_id: Uuid,
 ) -> Result<Option<PreKeyBundleResponse>, sqlx::Error> {
-    // 1. Fetch user identity key
-    let identity_key: Option<String> =
-        sqlx::query_scalar("SELECT public_key FROM users WHERE id = $1;")
+    // 1. Fetch user identity keys
+    let identity_keys: Option<(String, String)> =
+        sqlx::query_as("SELECT identity_key_dh, identity_key_sign FROM users WHERE id = $1;")
             .bind(user_id)
             .fetch_optional(pool)
             .await?;
 
-    let identity_key = match identity_key {
+    let (identity_key_dh, identity_key_sign) = match identity_keys {
         Some(k) => k,
         None => return Ok(None),
     };
@@ -242,7 +243,8 @@ pub async fn fetch_prekey_bundle(
 
     Ok(Some(PreKeyBundleResponse {
         user_id,
-        identity_key,
+        identity_key_dh,
+        identity_key_sign,
         signed_prekey,
         one_time_prekey,
     }))

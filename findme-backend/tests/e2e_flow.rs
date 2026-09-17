@@ -7,8 +7,8 @@ async fn test_complete_friend_and_location_lifecycle(pool: sqlx::PgPool) {
     let app = helpers::spawn_app(pool).await;
 
     // 1. Register users
-    let alice = app.create_user("alice", "alice_key").await;
-    let bob = app.create_user("bob", "bob_key").await;
+    let alice = app.create_user("alice", "alice_key", "alice_key").await;
+    let bob = app.create_user("bob", "bob_key", "bob_key").await;
 
     // 2. Alice attempts to send location before friendship -> Fails
     let res = app
