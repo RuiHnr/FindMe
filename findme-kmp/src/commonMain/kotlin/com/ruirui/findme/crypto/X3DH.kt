@@ -7,8 +7,8 @@ package com.ruirui.findme.crypto
  * Note: ALL keys provided to this function must be X25519 keys.
  *
  * @param crypto The cryptographic primitive provider.
- * @param aliceIdentityKey Alice's long-term identity key pair (X25519). Authenticates Alice to Bob.
- * @param aliceBaseKey Alice's ephemeral base key pair (X25519) generated for this specific session. Provides forward secrecy.
+ * @param aliceIdentityPrivateKey Alice's long-term identity private dh key pair (X25519). Authenticates Alice to Bob.
+ * @param aliceBasePrivateKey Alice's ephemeral base key pair (X25519) generated for this specific session. Provides forward secrecy.
  * @param bobIdentityKey Bob's long-term identity public key (X25519) fetched from the server. Authenticates Bob to Alice.
  * @param bobSignedPreKey Bob's medium-term signed prekey public key (X25519). Provides fallback forward secrecy.
  * @param bobOneTimePreKey Bob's single-use prekey public key (X25519). Provides immediate perfect forward secrecy if available.
@@ -16,26 +16,55 @@ package com.ruirui.findme.crypto
  */
 suspend fun initX3DH(
     crypto: Crypto,
-    aliceIdentityKey: KeyPair,
-    aliceBaseKey: KeyPair,
+    aliceIdentityPrivateKey: ByteArray,
+    aliceBasePrivateKey: ByteArray,
     bobIdentityKey: ByteArray,
     bobSignedPreKey: ByteArray,
     bobOneTimePreKey: ByteArray?
 ): ByteArray {
     // 1. Calculate DH Outputs
-    val dh1 = crypto.calculateDhAgreement(aliceIdentityKey.privateKey, bobSignedPreKey)
-    val dh2 = crypto.calculateDhAgreement(aliceBaseKey.privateKey, bobIdentityKey)
-    val dh3 = crypto.calculateDhAgreement(aliceBaseKey.privateKey, bobSignedPreKey)
+    val dh1 = crypto.calculateDhAgreement(aliceIdentityPrivateKey, bobSignedPreKey)
+    val dh2 = crypto.calculateDhAgreement(aliceBasePrivateKey, bobIdentityKey)
+    val dh3 = crypto.calculateDhAgreement(aliceBasePrivateKey, bobSignedPreKey)
 
     var sharedSecret = dh1 + dh2 + dh3
 
     // if a one-time prekey was available, add a 4th DH
     if (bobOneTimePreKey != null) {
-        val dh4 = crypto.calculateDhAgreement(aliceBaseKey.privateKey, bobOneTimePreKey)
+        val dh4 = crypto.calculateDhAgreement(aliceBasePrivateKey, bobOneTimePreKey)
         sharedSecret += dh4
     }
 
     // 2. Run through HKDF to generate the Master Secret
+    return crypto.hkdf(
+        ikm = sharedSecret,
+        salt = ByteArray(32),
+        info = "FindMe-X3DH".encodeToByteArray(),
+        outLength = 32
+    )
+}
+
+
+suspend fun receiveX3DH(
+    crypto: Crypto,
+    bobIdentityPrivateKey: ByteArray,
+    bobSignedPreKeyPrivate: ByteArray,
+    bobOneTimePreKeyPrivate: ByteArray?,
+    aliceIdentityPublicKey: ByteArray,
+    aliceBasePublicKey: ByteArray
+): ByteArray {
+    // Bob does the exact same 4 DH calculations, but inverted
+    val dh1 = crypto.calculateDhAgreement(bobSignedPreKeyPrivate, aliceIdentityPublicKey)
+    val dh2 = crypto.calculateDhAgreement(bobIdentityPrivateKey, aliceBasePublicKey)
+    val dh3 = crypto.calculateDhAgreement(bobSignedPreKeyPrivate, aliceBasePublicKey)
+
+    var sharedSecret = dh1 + dh2 + dh3
+
+    if (bobOneTimePreKeyPrivate != null) {
+        val dh4 = crypto.calculateDhAgreement(bobOneTimePreKeyPrivate, aliceBasePublicKey)
+        sharedSecret += dh4
+    }
+    // Run through HKDF to get the exact same Master Secret Alice got
     return crypto.hkdf(
         ikm = sharedSecret,
         salt = ByteArray(32),

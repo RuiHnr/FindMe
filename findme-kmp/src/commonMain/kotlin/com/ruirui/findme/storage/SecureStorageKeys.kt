@@ -7,7 +7,11 @@ object SecureStorageKeys {
 
     // Cryptography
     const val IDENTITY_PRIVATE_KEY_DH = "identity_private_key_dh"
+
+    const val IDENTITY_PUBLIC_KEY_DH = "identity_public_key_dh"
     const val IDENTITY_PRIVATE_KEY_SIGN = "identity_private_key_sign"
+
+    const val IDENTITY_PUBLIC_KEY_SIGN = "identity_public_key_sign"
 
     // Dynamic Keys
     fun ratchetState(friendId: String): String = "ratchet_state_$friendId"

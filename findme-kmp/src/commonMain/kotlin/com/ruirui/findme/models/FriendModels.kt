@@ -3,6 +3,9 @@ package com.ruirui.findme.models
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+@Serializable
+data class FriendDto(val userId: String)
+
 /**
  * Payload sent by an authenticated user to initiate a friend request by username.
  */

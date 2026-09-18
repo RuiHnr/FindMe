@@ -1,8 +1,8 @@
 package com.ruirui.findme.crypto
 
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertTrue
-import kotlinx.coroutines.test.runTest
 
 class X3DHTest {
 
@@ -25,54 +25,27 @@ class X3DHTest {
         // 2. Alice computes the shared secret (as the initiator)
         val aliceMasterSecret = initX3DH(
             crypto = crypto,
-            aliceIdentityKey = aliceIdentity,
-            aliceBaseKey = aliceBase,
+            aliceIdentityPrivateKey = aliceIdentity.privateKey,
+            aliceBasePrivateKey = aliceBase.privateKey,
             bobIdentityKey = bobIdentity.publicKey,
             bobSignedPreKey = bobSignedPreKey.publicKey,
             bobOneTimePreKey = bobOneTimePreKey.publicKey
         )
 
         // 3. Bob computes the shared secret (as the receiver)
-        val bobMasterSecret = receiveX3DHForTest(
+        val bobMasterSecret = receiveX3DH(
             crypto = crypto,
-            bobIdentityKey = bobIdentity,
-            bobSignedPreKey = bobSignedPreKey,
-            bobOneTimePreKey = bobOneTimePreKey,
-            aliceIdentityKey = aliceIdentity.publicKey,
-            aliceBaseKey = aliceBase.publicKey
+            bobIdentityPrivateKey = bobIdentity.privateKey,
+            bobSignedPreKeyPrivate = bobSignedPreKey.privateKey,
+            bobOneTimePreKeyPrivate = bobOneTimePreKey.privateKey,
+            aliceIdentityPublicKey = aliceIdentity.publicKey,
+            aliceBasePublicKey = aliceBase.publicKey
         )
 
         // 4. ASSERT: The entire point of Diffie-Hellman - they must perfectly match!
         assertTrue(
             aliceMasterSecret.contentEquals(bobMasterSecret),
             "Master secrets do not match! The real Diffie-Hellman math failed."
-        )
-    }
-
-    // Bob's perspective of X3DH. Placed here as a helper to keep production clean.
-    private suspend fun receiveX3DHForTest(
-        crypto: Crypto,
-        bobIdentityKey: KeyPair,
-        bobSignedPreKey: KeyPair,
-        bobOneTimePreKey: KeyPair?,
-        aliceIdentityKey: ByteArray,
-        aliceBaseKey: ByteArray
-    ): ByteArray {
-        val dh1 = crypto.calculateDhAgreement(bobSignedPreKey.privateKey, aliceIdentityKey)
-        val dh2 = crypto.calculateDhAgreement(bobIdentityKey.privateKey, aliceBaseKey)
-        val dh3 = crypto.calculateDhAgreement(bobSignedPreKey.privateKey, aliceBaseKey)
-
-        var sharedSecret = dh1 + dh2 + dh3
-        if (bobOneTimePreKey != null) {
-            val dh4 = crypto.calculateDhAgreement(bobOneTimePreKey.privateKey, aliceBaseKey)
-            sharedSecret += dh4
-        }
-
-        return crypto.hkdf(
-            ikm = sharedSecret,
-            salt = ByteArray(32),
-            info = "FindMe-X3DH".encodeToByteArray(),
-            outLength = 32
         )
     }
 }

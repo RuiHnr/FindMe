@@ -1,13 +1,12 @@
 package com.ruirui.findme.network.api
 
 import com.ruirui.findme.models.InboxMessage
-import com.ruirui.findme.models.SubmitLocationRequest
+import com.ruirui.findme.models.SubmitMessageRequest
 import com.ruirui.findme.network.safeApiCall
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
-import io.ktor.http.HttpStatusCode
 
 /**
  * Handles sending encrypted locations and fetching incoming location updates.
@@ -32,7 +31,7 @@ class LocationApi(private val client: HttpClient) {
      * @param request The encrypted location blob and the recipient's ID.
      * @return [Result] containing the HTTP status code on success.
      */
-    suspend fun submitLocation(request: SubmitLocationRequest): Result<HttpStatusCode> {
+    suspend fun submitMessage(request: SubmitMessageRequest): Result<Unit> {
         return safeApiCall {
             client.post("/inbox") {
                 setBody(request)

@@ -1,7 +1,7 @@
 package com.ruirui.findme.network.api
 
 import com.ruirui.findme.models.RegisterRequest
-import com.ruirui.findme.models.SubmitLocationRequest
+import com.ruirui.findme.models.SubmitMessageRequest
 import com.ruirui.findme.network.HttpClientFactory
 import com.ruirui.findme.storage.InMemorySecureStorage
 import io.ktor.client.engine.mock.MockEngine
@@ -38,7 +38,7 @@ class NetworkApiTest {
         val client = HttpClientFactory.create(mockEngine, secureStorage, baseUrl)
         val authApi = AuthApi(client)
 
-        val result = authApi.register(RegisterRequest("testUser", "pubKey123"))
+        val result = authApi.register(RegisterRequest("testUser", "pubKey123_dh", "pubKey123_sign"))
 
         assertTrue(result.isSuccess)
         assertEquals("test-uuid-001", result.getOrNull()?.userId)
@@ -80,7 +80,7 @@ class NetworkApiTest {
 
         // Test Submit
         val submitResult =
-            locationApi.submitLocation(SubmitLocationRequest("friend-123", "secretData"))
+            locationApi.submitMessage(SubmitMessageRequest("friend-123", "secretData"))
         assertTrue(submitResult.isSuccess)
         assertEquals(HttpStatusCode.OK, submitResult.getOrNull())
 

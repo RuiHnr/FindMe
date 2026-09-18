@@ -9,6 +9,8 @@ import com.ruirui.findme.storage.SecureStorage
 import com.ruirui.findme.storage.SecureStorageKeys.AUTH_TOKEN
 import com.ruirui.findme.storage.SecureStorageKeys.IDENTITY_PRIVATE_KEY_DH
 import com.ruirui.findme.storage.SecureStorageKeys.IDENTITY_PRIVATE_KEY_SIGN
+import com.ruirui.findme.storage.SecureStorageKeys.IDENTITY_PUBLIC_KEY_DH
+import com.ruirui.findme.storage.SecureStorageKeys.IDENTITY_PUBLIC_KEY_SIGN
 import com.ruirui.findme.storage.SecureStorageKeys.USER_ID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -62,7 +64,7 @@ class AuthRepositoryImpl(
         val publicKeySignBase64 = Base64.encode(identityKeyPairSign.publicKey)
         val privateKeySignBase64 = Base64.encode(identityKeyPairSign.privateKey)
 
-        // 2. Network call to backend
+        // 2. Send Registration Request
         val request = RegisterRequest(
             username = username,
             identityKeyDh = publicKeyDhBase64,
@@ -74,7 +76,9 @@ class AuthRepositoryImpl(
         secureStorage.putString(AUTH_TOKEN, response.token)
         secureStorage.putString(USER_ID, response.userId)
         secureStorage.putString(IDENTITY_PRIVATE_KEY_DH, privateKeyDhBase64)
+        secureStorage.putString(IDENTITY_PUBLIC_KEY_DH, publicKeyDhBase64)
         secureStorage.putString(IDENTITY_PRIVATE_KEY_SIGN, privateKeySignBase64)
+        secureStorage.putString(IDENTITY_PUBLIC_KEY_SIGN, publicKeySignBase64)
 
         // 4. Update UI State
         _authState.value = AuthState.Authenticated(response.userId)
