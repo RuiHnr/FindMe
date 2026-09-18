@@ -19,21 +19,29 @@ pub struct AppState {
 /// Defines all Endpoints and returns the router.
 pub fn build_router(state: AppState) -> Router {
     Router::new()
-        .route("/inbox/{receiver_id}", get(handlers::get_inbox))
-        .route("/inbox", post(handlers::receive_location))
-        .route("/friends/requests", post(handlers::request_friend))
+        // Location
+        .route("/inbox", get(handlers::location::get_inbox))
+        .route("/inbox", post(handlers::location::receive_location))
+
+        // Friends
+        .route("/friends", get(handlers::friends::get_friends))
+        .route("/friends/requests", get(handlers::friends::get_friend_requests))
+        .route("/friends/requests", post(handlers::friends::request_friend))
         .route(
             "/friends/requests/{id}/accept",
-            put(handlers::accept_friend),
+            put(handlers::friends::accept_friend),
         )
-        .route("/keys", post(handlers::upload_keys))
-        .route("/keys/count", get(handlers::get_key_count))
-        .route("/keys/{user_id}", get(handlers::get_prekey_bundle))
+
+        // Keys
+        .route("/keys", post(handlers::keys::upload_keys))
+        .route("/keys/count", get(handlers::keys::get_key_count))
+        .route("/keys/{user_id}", get(handlers::keys::get_prekey_bundle))
         .route_layer(from_fn_with_state(state.clone(), auth_middleware))
+        // All endpoints below are not authenticated via JWT
         .route(
             "/",
             get(|| async { "Welcome to the FindMe Server! (Status: Online)" }),
         )
-        .route("/users/register", post(handlers::register_user))
+        .route("/users/register", post(handlers::auth::register_user))
         .with_state(state)
 }
