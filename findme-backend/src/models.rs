@@ -18,7 +18,8 @@ pub struct InboxMessage {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct RegisterRequest {
     pub username: String,
-    pub pub_key: String,
+    pub identity_key_dh: String,
+    pub identity_key_sign: String,
 }
 
 /// The Register Response sent from the server
@@ -73,7 +74,8 @@ pub struct UploadKeysRequest {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct PreKeyBundleResponse {
     pub user_id: Uuid,
-    pub identity_key: String,
+    pub identity_key_dh: String,
+    pub identity_key_sign: String,
     pub signed_prekey: SignedPreKeyDto,
     pub one_time_prekey: Option<OneTimePreKeyDto>,
 }
