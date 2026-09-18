@@ -84,4 +84,20 @@ impl TestApp {
             .add_header("Authorization", format!("Bearer {}", token))
             .await
     }
+
+    /// Helper to get accepted friends
+    pub async fn get_friends(&self, token: &str) -> TestResponse {
+        self.server
+            .get("/friends")
+            .add_header("Authorization", format!("Bearer {}", token))
+            .await
+    }
+
+    /// Helper to get pending friend requests
+    pub async fn get_friend_requests(&self, token: &str) -> TestResponse {
+        self.server
+            .get("/friends/requests")
+            .add_header("Authorization", format!("Bearer {}", token))
+            .await
+    }
 }
