@@ -29,12 +29,18 @@ pub async fn spawn_app(pool: PgPool) -> TestApp {
 
 impl TestApp {
     /// Helper to register a new user and extract the response
-    pub async fn create_user(&self, username: &str, pub_key: &str) -> RegisterResponse {
+    pub async fn create_user(
+        &self,
+        username: &str,
+        identity_key_dh: &str,
+        identity_key_sign: &str,
+    ) -> RegisterResponse {
         self.server
             .post("/users/register")
             .json(&RegisterRequest {
                 username: username.to_string(),
-                pub_key: pub_key.to_string(),
+                identity_key_dh: identity_key_dh.to_string(),
+                identity_key_sign: identity_key_sign.to_string(),
             })
             .await
             .json()
@@ -77,9 +83,25 @@ impl TestApp {
     }
 
     /// Helper to fetch the inbox for a specific user
-    pub async fn get_inbox(&self, token: &str, receiver_id: Uuid) -> TestResponse {
+    pub async fn get_inbox(&self, token: &str) -> TestResponse {
         self.server
-            .get(&format!("/inbox/{}", receiver_id))
+            .get("/inbox")
+            .add_header("Authorization", format!("Bearer {}", token))
+            .await
+    }
+
+    /// Helper to get accepted friends
+    pub async fn get_friends(&self, token: &str) -> TestResponse {
+        self.server
+            .get("/friends")
+            .add_header("Authorization", format!("Bearer {}", token))
+            .await
+    }
+
+    /// Helper to get pending friend requests
+    pub async fn get_friend_requests(&self, token: &str) -> TestResponse {
+        self.server
+            .get("/friends/requests")
             .add_header("Authorization", format!("Bearer {}", token))
             .await
     }

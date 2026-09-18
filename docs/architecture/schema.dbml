@@ -3,7 +3,8 @@
 Table users {
   id uuid [primary key, note: 'Auto generated UUID']
   username varchar [unique, not null]
-  public_key text [not null, note: 'DH public key for initial handshake']
+  identity_key_dh text [not null, note: 'X25519 DH public key for initial handshake']
+  identity_key_sign text [not null, note: 'Ed25519 public key for signing prekeys']
   created_at timestamp [default: `now()`]
 }
 

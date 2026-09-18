@@ -9,8 +9,12 @@ async fn test_upload_and_fetch_prekey_bundle(pool: sqlx::PgPool) {
     let app = helpers::spawn_app(pool).await;
 
     // 1. Create two users: Alice and Bob
-    let alice = app.create_user("alice", "alice_identity_key_123").await;
-    let bob = app.create_user("bob", "bob_identity_key_456").await;
+    let alice = app
+        .create_user("alice", "alice_identity_key_123", "alice_identity_key_123")
+        .await;
+    let bob = app
+        .create_user("bob", "bob_identity_key_456", "bob_identity_key_456")
+        .await;
 
     // 2. Establish friendship between Alice and Bob
     let req_res = app.send_friend_request(&alice.token, "bob").await;
@@ -67,7 +71,7 @@ async fn test_upload_and_fetch_prekey_bundle(pool: sqlx::PgPool) {
 
     let bundle: PreKeyBundleResponse = bundle_res.json();
     assert_eq!(bundle.user_id, bob.user_id);
-    assert_eq!(bundle.identity_key, "bob_identity_key_456");
+    assert_eq!(bundle.identity_key_dh, "bob_identity_key_456");
     assert_eq!(bundle.signed_prekey.key_id, 1);
     assert!(bundle.one_time_prekey.is_some());
     let first_otpk = bundle.one_time_prekey.unwrap();
@@ -105,8 +109,8 @@ async fn test_upload_and_fetch_prekey_bundle(pool: sqlx::PgPool) {
 async fn test_prekey_bundle_unauthorized_non_friend(pool: sqlx::PgPool) {
     let app = helpers::spawn_app(pool).await;
 
-    let alice = app.create_user("alice", "alice_key").await;
-    let eve = app.create_user("eve", "eve_key").await;
+    let alice = app.create_user("alice", "alice_key", "alice_key").await;
+    let eve = app.create_user("eve", "eve_key", "eve_key").await;
 
     // Eve is NOT friends with Alice, should not be able to fetch Alice's prekey bundle
     let res = app

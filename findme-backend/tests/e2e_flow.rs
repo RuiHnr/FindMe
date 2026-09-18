@@ -7,8 +7,8 @@ async fn test_complete_friend_and_location_lifecycle(pool: sqlx::PgPool) {
     let app = helpers::spawn_app(pool).await;
 
     // 1. Register users
-    let alice = app.create_user("alice", "alice_key").await;
-    let bob = app.create_user("bob", "bob_key").await;
+    let alice = app.create_user("alice", "alice_key", "alice_key").await;
+    let bob = app.create_user("bob", "bob_key", "bob_key").await;
 
     // 2. Alice attempts to send location before friendship -> Fails
     let res = app
@@ -31,7 +31,7 @@ async fn test_complete_friend_and_location_lifecycle(pool: sqlx::PgPool) {
     assert_eq!(res.status_code(), StatusCode::OK);
 
     // 6. Bob reads inbox -> gets Alice's message
-    let res = app.get_inbox(&bob.token, bob.user_id).await;
+    let res = app.get_inbox(&bob.token).await;
     assert_eq!(res.status_code(), StatusCode::OK);
 
     let messages: Vec<InboxMessage> = res.json();
@@ -40,7 +40,7 @@ async fn test_complete_friend_and_location_lifecycle(pool: sqlx::PgPool) {
     assert_eq!(messages[0].encrypted_payload, "real_secret_location");
 
     // 7. Bob reads inbox again -> should be empty (consumed)
-    let res2 = app.get_inbox(&bob.token, bob.user_id).await;
+    let res2 = app.get_inbox(&bob.token).await;
     assert_eq!(res2.status_code(), StatusCode::OK);
 
     let empty_messages: Vec<InboxMessage> = res2.json();
