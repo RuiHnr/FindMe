@@ -1,11 +1,6 @@
 use crate::models::SubmitLocationRequest;
 use crate::{AppState, db};
-use axum::{
-    Extension, Json,
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-};
+use axum::{Extension, Json, extract::State, http::StatusCode, response::IntoResponse};
 use uuid::Uuid;
 
 /// Receives an encrypted location payload and queues it in the receiver's inbox.
@@ -28,8 +23,8 @@ pub(crate) async fn receive_location(
         &payload.receiver_id,
         &payload.encrypted_blob,
     )
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(StatusCode::OK)
 }

@@ -29,7 +29,12 @@ pub async fn spawn_app(pool: PgPool) -> TestApp {
 
 impl TestApp {
     /// Helper to register a new user and extract the response
-    pub async fn create_user(&self, username: &str, identity_key_dh: &str, identity_key_sign: &str) -> RegisterResponse {
+    pub async fn create_user(
+        &self,
+        username: &str,
+        identity_key_dh: &str,
+        identity_key_sign: &str,
+    ) -> RegisterResponse {
         self.server
             .post("/users/register")
             .json(&RegisterRequest {

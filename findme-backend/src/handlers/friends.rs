@@ -1,5 +1,5 @@
-use crate::{AppState, db};
 use crate::models::FriendRequest;
+use crate::{AppState, db};
 use axum::{
     Extension, Json,
     extract::{Path, State},

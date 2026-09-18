@@ -15,5 +15,3 @@ async fn test_non_friend_cannot_send_location(pool: sqlx::PgPool) {
     // Should be rejected
     assert_eq!(res.status_code(), StatusCode::FORBIDDEN);
 }
-
-

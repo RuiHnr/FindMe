@@ -17,12 +17,12 @@ pub async fn upsert_signed_prekey(
              signature = EXCLUDED.signature,
              created_at = CURRENT_TIMESTAMP;",
     )
-        .bind(user_id)
-        .bind(prekey.key_id)
-        .bind(&prekey.public_key)
-        .bind(&prekey.signature)
-        .execute(pool)
-        .await?;
+    .bind(user_id)
+    .bind(prekey.key_id)
+    .bind(&prekey.public_key)
+    .bind(&prekey.signature)
+    .execute(pool)
+    .await?;
 
     Ok(())
 }
@@ -44,11 +44,11 @@ pub async fn insert_onetime_prekeys(
              VALUES ($1, $2, $3)
              ON CONFLICT (user_id, key_id) DO NOTHING;",
         )
-            .bind(user_id)
-            .bind(key.key_id)
-            .bind(&key.public_key)
-            .execute(&mut *tx)
-            .await?;
+        .bind(user_id)
+        .bind(key.key_id)
+        .bind(&key.public_key)
+        .execute(&mut *tx)
+        .await?;
     }
     tx.commit().await?;
 
@@ -86,9 +86,9 @@ pub async fn fetch_prekey_bundle(
     let signed_prekey = sqlx::query_as::<_, SignedPreKeyDto>(
         "SELECT key_id, public_key, signature FROM signed_prekeys WHERE user_id = $1;",
     )
-        .bind(user_id)
-        .fetch_optional(pool)
-        .await?;
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await?;
 
     let signed_prekey = match signed_prekey {
         Some(spk) => spk,
@@ -108,9 +108,9 @@ pub async fn fetch_prekey_bundle(
          )
          RETURNING key_id, public_key;",
     )
-        .bind(user_id)
-        .fetch_optional(pool)
-        .await?;
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await?;
 
     Ok(Some(PreKeyBundleResponse {
         user_id,

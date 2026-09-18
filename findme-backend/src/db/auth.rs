@@ -10,12 +10,12 @@ pub async fn create_user(pool: &PgPool, req: &RegisterRequest) -> Result<Uuid, s
         "INSERT INTO users (id, username, identity_key_dh, identity_key_sign)
          VALUES($1, $2, $3, $4) RETURNING id;",
     )
-        .bind(new_user_id)
-        .bind(&req.username)
-        .bind(&req.identity_key_dh)
-        .bind(&req.identity_key_sign)
-        .execute(pool)
-        .await?;
+    .bind(new_user_id)
+    .bind(&req.username)
+    .bind(&req.identity_key_dh)
+    .bind(&req.identity_key_sign)
+    .execute(pool)
+    .await?;
 
     Ok(new_user_id)
 }

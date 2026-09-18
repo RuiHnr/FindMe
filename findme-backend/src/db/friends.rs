@@ -14,11 +14,11 @@ pub async fn send_friend_request(
         VALUES ($1, $2, $3)
         ON CONFLICT (user_id_a, user_id_b) DO NOTHING;",
     )
-        .bind(sender)
-        .bind(target)
-        .bind("pending")
-        .execute(pool)
-        .await?;
+    .bind(sender)
+    .bind(target)
+    .bind("pending")
+    .execute(pool)
+    .await?;
 
     Ok(())
 }
@@ -33,11 +33,11 @@ pub async fn accept_friend_request(
         "UPDATE friendships SET status = $1
            WHERE user_id_a = $2 AND user_id_b = $3;",
     )
-        .bind("accepted")
-        .bind(requester)
-        .bind(user)
-        .execute(pool)
-        .await?;
+    .bind("accepted")
+    .bind(requester)
+    .bind(user)
+    .execute(pool)
+    .await?;
 
     Ok(())
 }
@@ -52,10 +52,10 @@ pub async fn are_friends(pool: &PgPool, user1: Uuid, user2: Uuid) -> Result<bool
             (user_id_a = $2 AND user_id_b = $1))
         );",
     )
-        .bind(user1)
-        .bind(user2)
-        .fetch_one(pool)
-        .await?;
+    .bind(user1)
+    .bind(user2)
+    .fetch_one(pool)
+    .await?;
 
     Ok(is_friend)
 }
@@ -91,10 +91,10 @@ pub async fn get_friend_requests_by_id(
                 SELECT 1 FROM friendships
                  WHERE user_id_a = users.id AND user_id_b = $1
                  AND status = 'pending'
-            )"
+            )",
     )
-        .bind(user_id)
-        .fetch_all(pool)
-        .await?;
+    .bind(user_id)
+    .fetch_all(pool)
+    .await?;
     Ok(friends)
 }

@@ -54,7 +54,7 @@ async fn test_get_friends_and_requests(pool: sqlx::PgPool) {
 
     // Alice sends request to Bob
     app.send_friend_request(&alice.token, "bob").await;
-    
+
     // Charlie sends request to Bob
     app.send_friend_request(&charlie.token, "bob").await;
 

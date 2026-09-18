@@ -15,12 +15,12 @@ pub async fn insert_location(
         "INSERT INTO location_inbox (id, sender_id, receiver_id, encrypted_payload)
              VALUES ($1, $2, $3, $4);",
     )
-        .bind(new_entry_id)
-        .bind(sender_id)
-        .bind(receiver_id)
-        .bind(encrypted_blob)
-        .execute(pool)
-        .await?;
+    .bind(new_entry_id)
+    .bind(sender_id)
+    .bind(receiver_id)
+    .bind(encrypted_blob)
+    .execute(pool)
+    .await?;
 
     Ok(())
 }
@@ -35,9 +35,9 @@ pub async fn fetch_inbox(
              WHERE receiver_id = $1
              RETURNING sender_id, encrypted_payload;",
     )
-        .bind(receiver_id)
-        .fetch_all(pool)
-        .await?;
+    .bind(receiver_id)
+    .fetch_all(pool)
+    .await?;
 
     Ok(messages)
 }

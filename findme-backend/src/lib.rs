@@ -22,16 +22,17 @@ pub fn build_router(state: AppState) -> Router {
         // Location
         .route("/inbox", get(handlers::location::get_inbox))
         .route("/inbox", post(handlers::location::receive_location))
-
         // Friends
         .route("/friends", get(handlers::friends::get_friends))
-        .route("/friends/requests", get(handlers::friends::get_friend_requests))
+        .route(
+            "/friends/requests",
+            get(handlers::friends::get_friend_requests),
+        )
         .route("/friends/requests", post(handlers::friends::request_friend))
         .route(
             "/friends/requests/{id}/accept",
             put(handlers::friends::accept_friend),
         )
-
         // Keys
         .route("/keys", post(handlers::keys::upload_keys))
         .route("/keys/count", get(handlers::keys::get_key_count))
