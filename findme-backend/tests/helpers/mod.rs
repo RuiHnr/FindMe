@@ -78,9 +78,9 @@ impl TestApp {
     }
 
     /// Helper to fetch the inbox for a specific user
-    pub async fn get_inbox(&self, token: &str, receiver_id: Uuid) -> TestResponse {
+    pub async fn get_inbox(&self, token: &str) -> TestResponse {
         self.server
-            .get(&format!("/inbox/{}", receiver_id))
+            .get("/inbox")
             .add_header("Authorization", format!("Bearer {}", token))
             .await
     }
