@@ -1,37 +1,48 @@
 package com.ruirui.findme.repository
 
-import com.ruirui.findme.crypto.Crypto
-import com.ruirui.findme.crypto.initX3DH
 import com.ruirui.findme.models.FriendDto
 import com.ruirui.findme.models.FriendRequest
-import com.ruirui.findme.models.MessageHeader
-import com.ruirui.findme.models.PreKeySignalMessage
-import com.ruirui.findme.models.SubmitMessageRequest
 import com.ruirui.findme.network.api.FriendsApi
-import com.ruirui.findme.network.api.KeysApi
-import com.ruirui.findme.network.api.LocationApi
-import com.ruirui.findme.storage.SecureStorage
-import com.ruirui.findme.storage.SecureStorageKeys
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlin.io.encoding.Base64
 
+/**
+ * Manages the user's social graph, handling fetching friends, sending requests,
+ * and accepting inbound requests.
+ */
 interface FriendRepository {
+    /**
+     * A real-time reactive flow of the user's accepted friends.
+     */
     val friends: StateFlow<List<FriendDto>>
+
+    /**
+     * A real-time reactive flow of the user's pending inbound friend requests.
+     */
     val friendRequests: StateFlow<List<FriendRequest>>
 
+    /**
+     * Fetches the latest friends list and pending requests from the backend
+     * and updates the local state flows.
+     */
     suspend fun syncFriends(): Result<Unit>
+
+    /**
+     * Submits an outbound friend request to another user by their exact username.
+     */
     suspend fun sendFriendRequest(targetUsername: String): Result<Unit>
+
+    /**
+     * Accepts a pending inbound friend request.
+     * Note: Cryptographic sessions are initialized lazily upon sending the first location,
+     * not immediately upon acceptance.
+     */
     suspend fun acceptFriendRequest(requestId: String, friendId: String): Result<Unit>
 }
 
 class FriendRepositoryImpl(
     private val friendsApi: FriendsApi,
-    private val keysApi: KeysApi,
-    private val locationApi: LocationApi,
-    private val crypto: Crypto,
-    private val secureStorage: SecureStorage
 ) : FriendRepository {
 
     private val _friends = MutableStateFlow<List<FriendDto>>(emptyList())
@@ -58,72 +69,10 @@ class FriendRepositoryImpl(
         requestId: String,
         friendId: String
     ): Result<Unit> = runCatching {
-        // 1. Accept the friend request
-        friendsApi.accept(requestId)
+        // 1. Accept the friend request on the backend
+        friendsApi.accept(requestId).getOrThrow()
 
-        // 2. Initiate Cryptographic Session
-        // Download friend's Prekey bundle to initialize the ratchet session
-        val preKeyBundle = keysApi.getPreKeyBundle(friendId).getOrThrow()
-
-        // Verify friend's signature is valid
-        crypto.verify(
-            preKeyBundle.signedPreKey.publicKey.let { Base64.decode(it) },
-            preKeyBundle.identityKeySign.let { Base64.decode(it) },
-            preKeyBundle.signedPreKey.signature.let { Base64.decode(it) }
-        )
-
-        // Fetch our own keys
-        val identityPrivateKeyBase64 =
-            secureStorage.getString(SecureStorageKeys.IDENTITY_PRIVATE_KEY_DH)
-                ?: throw Exception("Identity private key not found")
-
-        val identityPublicKeyBase64 =
-            secureStorage.getString((SecureStorageKeys.IDENTITY_PUBLIC_KEY_DH))
-                ?: throw Exception("Identity public key not found")
-
-        val baseKey = crypto.generateX25519KeyPair()
-
-        // Perform X3DH and derive secret key
-        val masterSecret = initX3DH(
-            crypto,
-            identityPrivateKeyBase64.let { Base64.decode(it) },
-            baseKey.privateKey,
-            preKeyBundle.identityKeyDh.let { Base64.decode(it) },
-            preKeyBundle.signedPreKey.publicKey.let { Base64.decode(it) },
-            preKeyBundle.oneTimePreKey?.publicKey?.let { Base64.decode(it) }
-        )
-
-        // Save the master secret
-        secureStorage.putString(
-            SecureStorageKeys.ratchetState(friendId),
-            Base64.encode(masterSecret)
-        )
-
-        // Send our public keys to the friend in PreKeySignalMessage
-        val preKeyMessage = PreKeySignalMessage(
-            header = MessageHeader(
-                aliceIdentityKeyDh = identityPublicKeyBase64,
-                aliceBaseKeyDh = Base64.encode(baseKey.publicKey),
-                bobSignedPreKeyId = preKeyBundle.signedPreKey.keyId,
-                bobOneTimePreKeyId = preKeyBundle.oneTimePreKey?.keyId
-            ),
-            ciphertext = "" // TODO: The first encrypted location payload goes here eventually
-        )
-
-        locationApi.submitMessage(
-            SubmitMessageRequest(
-                receiverId = friendId,
-                // We must serialize the object to a JSON string, NOT .toString()!
-                encryptedBlob = kotlinx.serialization.json.Json.encodeToString(
-                    PreKeySignalMessage.serializer(),
-                    preKeyMessage
-                )
-            )
-        ).getOrThrow()
-
-        // 3. Update UI state
+        // 2. Update UI state
         syncFriends()
     }
-
-
 }

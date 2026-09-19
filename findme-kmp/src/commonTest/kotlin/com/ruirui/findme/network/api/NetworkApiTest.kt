@@ -21,7 +21,7 @@ class NetworkApiTest {
 
     @Test
     fun testAuthApiRegister() = runTest {
-        secureStorage.putString("jwt_token", "test_mock_token_123")
+        secureStorage.putString(com.ruirui.findme.storage.SecureStorageKeys.AUTH_TOKEN, "test_mock_token_123")
 
         val mockEngine = MockEngine { request ->
             assertEquals("/users/register", request.url.encodedPath)
@@ -46,7 +46,7 @@ class NetworkApiTest {
 
     @Test
     fun testLocationApiSubmitAndGet() = runTest {
-        secureStorage.putString("jwt_token", "test_mock_token_123")
+        secureStorage.putString(com.ruirui.findme.storage.SecureStorageKeys.AUTH_TOKEN, "test_mock_token_123")
 
         val mockEngine = MockEngine { request ->
             // Verify JWT Token was automatically injected
@@ -54,21 +54,20 @@ class NetworkApiTest {
 
             when (request.url.encodedPath) {
                 "/inbox" -> {
-                    assertEquals("POST", request.method.value)
-                    respond(
-                        content = "",
-                        status = HttpStatusCode.OK,
-                        headers = headersOf(HttpHeaders.ContentType, "application/json")
-                    )
-                }
-
-                "/inbox/friend-123" -> {
-                    assertEquals("GET", request.method.value)
-                    respond(
-                        content = """[{"sender_id": "alice", "encrypted_payload": "secretData"}]""",
-                        status = HttpStatusCode.OK,
-                        headers = headersOf(HttpHeaders.ContentType, "application/json")
-                    )
+                    if (request.method.value == "POST") {
+                        respond(
+                            content = "",
+                            status = HttpStatusCode.OK,
+                            headers = headersOf()
+                        )
+                    } else {
+                        assertEquals("GET", request.method.value)
+                        respond(
+                            content = """[{"sender_id": "alice", "encrypted_payload": {"type": "normal_message", "ciphertext": {"ratchetKey": [1,2,3], "msgNumber": 0, "previousChainLength": 0, "ciphertext": [1,2,3]}}}]""",
+                            status = HttpStatusCode.OK,
+                            headers = headersOf(HttpHeaders.ContentType, "application/json")
+                        )
+                    }
                 }
 
                 else -> error("Unhandled request: ${request.url.encodedPath}")
@@ -81,11 +80,11 @@ class NetworkApiTest {
         // Test Submit
         val submitResult =
             locationApi.submitMessage(SubmitMessageRequest("friend-123", "secretData"))
-        assertTrue(submitResult.isSuccess)
-        assertEquals(HttpStatusCode.OK, submitResult.getOrNull())
+        assertTrue(submitResult.isSuccess, "submitMessage failed: ${submitResult.exceptionOrNull()?.message}")
+        assertEquals(Unit, submitResult.getOrNull())
 
         // Test Get Inbox
-        val inboxResult = locationApi.getInbox("friend-123")
+        val inboxResult = locationApi.getInbox()
         assertTrue(inboxResult.isSuccess)
 
         val inbox = inboxResult.getOrNull()
@@ -95,7 +94,7 @@ class NetworkApiTest {
 
     @Test
     fun testKeysApiUploadAndGet() = runTest {
-        secureStorage.putString("jwt_token", "test_mock_token_123")
+        secureStorage.putString(com.ruirui.findme.storage.SecureStorageKeys.AUTH_TOKEN, "test_mock_token_123")
 
         val mockEngine = MockEngine { request ->
             when (request.url.encodedPath) {

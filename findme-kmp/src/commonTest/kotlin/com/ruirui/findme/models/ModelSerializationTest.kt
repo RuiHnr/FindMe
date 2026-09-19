@@ -23,7 +23,7 @@ class ModelSerializationTest {
         val jsonString = json.encodeToString(request)
 
         // Assert field name serialization
-        assertEquals("""{"username":"alice","pub_key":"test_key_base64"}""", jsonString)
+        assertEquals("""{"username":"alice","identity_key_dh":"test_key_base64_dh","identity_key_sign":"test_key_base64_sign"}""", jsonString)
 
         val parsed = json.decodeFromString<RegisterRequest>(jsonString)
         assertEquals(request, parsed)
@@ -50,7 +50,7 @@ class ModelSerializationTest {
 
         val bundle = json.decodeFromString<PreKeyBundleResponse>(rawJson)
         assertEquals("123e4567-e89b-12d3-a456-426614174000", bundle.userId)
-        assertEquals("alice_id_key", bundle.identityKeyDh)
+        assertEquals("alice_id_key_dh", bundle.identityKeyDh)
         assertEquals("alice_id_key_sign", bundle.identityKeySign)
         assertEquals(1, bundle.signedPreKey.keyId)
         assertNotNull(bundle.oneTimePreKey)
@@ -62,7 +62,8 @@ class ModelSerializationTest {
         val rawJson = """
             {
                 "user_id": "123e4567-e89b-12d3-a456-426614174000",
-                "identity_key": "alice_id_key",
+                "identity_key_dh": "alice_id_key_dh",
+                "identity_key_sign": "alice_id_key_sign",
                 "signed_prekey": {
                     "key_id": 1,
                     "public_key": "alice_spk_key",

@@ -27,9 +27,9 @@ class X3DHTest {
             crypto = crypto,
             aliceIdentityPrivateKey = aliceIdentity.privateKey,
             aliceBasePrivateKey = aliceBase.privateKey,
-            bobIdentityKey = bobIdentity.publicKey,
-            bobSignedPreKey = bobSignedPreKey.publicKey,
-            bobOneTimePreKey = bobOneTimePreKey.publicKey
+            bobIdentityPublicKey = bobIdentity.publicKey,
+            bobSignedPreKeyPublic = bobSignedPreKey.publicKey,
+            bobOneTimePreKeyPublic = bobOneTimePreKey.publicKey
         )
 
         // 3. Bob computes the shared secret (as the receiver)

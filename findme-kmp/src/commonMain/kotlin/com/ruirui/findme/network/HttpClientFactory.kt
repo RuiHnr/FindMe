@@ -13,6 +13,11 @@ import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
+/**
+ * Factory for creating configured Ktor HTTP clients across KMP targets.
+ * Installs JSON content negotiation and the Auth plugin to proactively attach 
+ * JWT Bearer tokens from SecureStorage on every outgoing request.
+ */
 object HttpClientFactory {
 
     fun create(secureStorage: SecureStorage, baseUrl: String): HttpClient {
@@ -51,13 +56,14 @@ object HttpClientFactory {
         install(Auth) {
             bearer {
                 loadTokens {
-                    val token = secureStorage.getString("jwt_token")
+                    val token = secureStorage.getString(com.ruirui.findme.storage.SecureStorageKeys.AUTH_TOKEN)
                     if (token != null) {
                         BearerTokens(accessToken = token, refreshToken = "")
                     } else {
                         null
                     }
                 }
+                sendWithoutRequest { true }
             }
         }
     }

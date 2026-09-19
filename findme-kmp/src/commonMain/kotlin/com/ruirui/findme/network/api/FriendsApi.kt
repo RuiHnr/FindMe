@@ -4,6 +4,7 @@ import com.ruirui.findme.models.FriendDto
 import com.ruirui.findme.models.FriendRequest
 import com.ruirui.findme.network.safeApiCall
 import io.ktor.client.HttpClient
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
@@ -39,11 +40,25 @@ class FriendsApi(private val client: HttpClient) {
         }
     }
 
+    /**
+     * Fetches the current user's list of accepted friends.
+     * 
+     * @return [Result] containing a list of [FriendDto] representing established connections.
+     */
     suspend fun getFriends(): Result<List<FriendDto>> {
-        TODO("Not yet implemented")
+        return safeApiCall {
+            client.get("/friends")
+        }
     }
 
+    /**
+     * Fetches all pending inbound friend requests for the current user.
+     * 
+     * @return [Result] containing a list of [FriendRequest] waiting for approval.
+     */
     suspend fun getFriendRequests(): Result<List<FriendRequest>> {
-        TODO()
+        return safeApiCall {
+            client.get("/friends/requests")
+        }
     }
 }

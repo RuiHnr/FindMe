@@ -71,7 +71,7 @@ FindMe is currently in **Phase 4: Implementation** of its roadmap.
 
 ### Priority 3: Mobile Client Integration (KMP)
 
-- [/] **Kotlin Multiplatform Core Module (`findme-kmp`):** (See detailed
+- [x] **Kotlin Multiplatform Core Module (`findme-kmp`):** (See detailed
   plan: [docs/findme-kmp/plan.md](file:///c:/Users/Laurin/Documents/Uni/OwnProjects/FindMe/docs/findme-kmp/plan.md))
     - [x] Project and build setup targeting Android and iOS.
     - [x] Shared data models mirroring backend Axum Serde types (`@Serializable`).
@@ -79,7 +79,8 @@ FindMe is currently in **Phase 4: Implementation** of its roadmap.
       DataStore implementation, and contract unit tests with `InMemorySecureStorage`.
     - [x] Ktor HTTP client (`FindMeApiClient`) with automatic JWT bearer authentication.
     - [x] Signal Protocol (X3DH + Double Ratchet) cryptography engine.
-    - [ ] Repository layer with reactive `StateFlow` streams.
+    - [x] Repository layer with reactive `StateFlow` streams.
+    - [x] Comprehensive Test Suite (E2E Message Exchange and Mock APIs).
 - [ ] **UI Integration:**
     - Connect Android Jetpack Compose UI and background `LocationService` to the KMP networking
       layer.

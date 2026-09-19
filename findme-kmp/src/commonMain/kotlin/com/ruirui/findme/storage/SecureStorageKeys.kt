@@ -15,4 +15,10 @@ object SecureStorageKeys {
 
     // Dynamic Keys
     fun ratchetState(friendId: String): String = "ratchet_state_$friendId"
+
+    fun signedPreKeyPrivate(keyId: Int) = "signed_prekey_private_$keyId"
+
+    fun signedPreKeyPublic(keyId: Int) = "signed_prekey_public_$keyId"
+
+    fun oneTimePreKeyPrivate(keyId: Int) = "onetime_prekey_private_$keyId"
 }

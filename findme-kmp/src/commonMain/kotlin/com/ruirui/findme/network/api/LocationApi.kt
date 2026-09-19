@@ -15,13 +15,11 @@ class LocationApi(private val client: HttpClient) {
 
     /**
      * Fetches and consumes all pending location messages queued in the user's inbox.
-     * 
-     * @param receiverId The authenticated user's UUID.
      * @return [Result] containing a list of pending [InboxMessage]s.
      */
-    suspend fun getInbox(receiverId: String): Result<List<InboxMessage>> {
+    suspend fun getInbox(): Result<List<InboxMessage>> {
         return safeApiCall {
-            client.get("/inbox/$receiverId")
+            client.get("/inbox")
         }
     }
 

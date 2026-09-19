@@ -95,9 +95,18 @@ FindMe/
 
 ### Step 7: Repository Layer & Reactive State (`commonMain/repository`)
 
-- [ ] `AuthRepository`: Coordinates registration, token storage, and session lifecycle.
-- [ ] `FriendRepository`: Manages friend requests, accepted friendships, and fetching prekey
+- [x] `AuthRepository`: Coordinates registration, token storage, and session lifecycle.
+- [x] `FriendRepository`: Manages friend requests, accepted friendships, and fetching prekey
   bundles.
-- [ ] `LocationRepository`: Ingests location updates from native OS services, encrypts via Ratchet
+- [x] `LocationRepository`: Ingests location updates from native OS services, encrypts via Ratchet
   session, and dispatches to `/inbox`.
-- [ ] Expose reactive Kotlin `StateFlow` and `SharedFlow` streams for UI consumption.
+- [x] Expose reactive Kotlin `StateFlow` streams for UI consumption.
+- [x] Full Unit & E2E Testing of Repositories via Mock Ktor Engine.
+
+### Step 8: Production E2EE Enhancements (Upcoming)
+
+- [ ] **One-Time PreKey (OTPK) Management**: Generate batch OTPKs on registration, upload to backend, and delete local private keys upon usage for true Perfect Forward Secrecy.
+- [ ] **Local SQLDelight Database**: Replace purely in-memory `FriendDto` state with persisted DB tables for offline friend lists and location history.
+- [ ] **TOFU Identity Pinning**: Cache friend Identity Keys in the local database to detect Man-In-The-Middle attacks or device resets.
+- [ ] **Session Healing**: Automatically trigger a new X3DH handshake if Double Ratchet decryption fails repeatedly.
+- [ ] **Background Sync**: Integrate Push Notifications (FCM / APNs) to trigger headless inbox synchronization.
