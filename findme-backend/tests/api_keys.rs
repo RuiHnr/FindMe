@@ -9,8 +9,12 @@ async fn test_upload_and_fetch_prekey_bundle(pool: sqlx::PgPool) {
     let app = helpers::spawn_app(pool).await;
 
     // 1. Create two users: Alice and Bob
-    let alice = app.create_user("alice", "alice_identity_key_123", "alice_identity_key_123").await;
-    let bob = app.create_user("bob", "bob_identity_key_456", "bob_identity_key_456").await;
+    let alice = app
+        .create_user("alice", "alice_identity_key_123", "alice_identity_key_123")
+        .await;
+    let bob = app
+        .create_user("bob", "bob_identity_key_456", "bob_identity_key_456")
+        .await;
 
     // 2. Establish friendship between Alice and Bob
     let req_res = app.send_friend_request(&alice.token, "bob").await;

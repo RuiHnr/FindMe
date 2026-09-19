@@ -23,7 +23,8 @@ async fn test_register_duplicate_username(pool: sqlx::PgPool) {
         .post("/users/register")
         .json(&RegisterRequest {
             username: "alice".to_string(),
-            identity_key_dh: "pub_key_456".to_string(), identity_key_sign: "pub_key_456".to_string(),
+            identity_key_dh: "pub_key_456".to_string(),
+            identity_key_sign: "pub_key_456".to_string(),
         })
         .await;
 
