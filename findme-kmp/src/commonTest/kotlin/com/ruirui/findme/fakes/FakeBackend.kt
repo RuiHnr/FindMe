@@ -130,7 +130,11 @@ class FakeBackend {
 
             path == "/inbox" && method == "GET" -> {
                 val messages = locationBackend.getInbox(dynamicUserId)
-                respond(Json.encodeToString(messages), HttpStatusCode.OK, responseHeaders)
+                val newHeaders = io.ktor.http.Headers.build {
+                    appendAll(responseHeaders)
+                    append("X-Remaining-PreKeys", "99")
+                }
+                respond(Json.encodeToString(messages), HttpStatusCode.OK, newHeaders)
             }
 
             else -> error("Unhandled mock request: $method ${request.url} ${request.url.encodedPath} body=${request.body::class}")

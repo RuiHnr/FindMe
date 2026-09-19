@@ -4,6 +4,7 @@ object SecureStorageKeys {
     // Auth & Identity
     const val AUTH_TOKEN = "auth_token"
     const val USER_ID = "user_id"
+    const val CURRENT_SIGNED_PREKEY_ID = "current_signed_prekey_id"
 
     // Cryptography
     const val IDENTITY_PRIVATE_KEY_DH = "identity_private_key_dh"

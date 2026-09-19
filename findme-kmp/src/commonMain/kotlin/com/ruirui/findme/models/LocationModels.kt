@@ -48,6 +48,14 @@ data class InboxMessage(
 )
 
 /**
+ * Result of fetching the inbox. Contains the messages and the server's remaining OTPK count.
+ */
+data class InboxResponse(
+    val messages: List<InboxMessage>,
+    val remainingPreKeys: Int?
+)
+
+/**
  * Payload sent by an authenticated client to queue an encrypted location package
  * in a friend's inbox.
  *

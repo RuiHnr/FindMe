@@ -22,6 +22,13 @@ interface PreKeyManager {
      * generates and uploads a new batch to replenish the server pool.
      */
     suspend fun replenishOneTimePreKeysIfNeeded()
+
+    /**
+     * Rotates the Signed PreKey by generating a new one with an incremented ID,
+     * uploading it to the backend, and securely persisting it locally.
+     * The old Signed PreKey is intentionally kept in storage to decrypt delayed incoming messages.
+     */
+    suspend fun rotateSignedPreKey()
 }
 
 @OptIn(ExperimentalEncodingApi::class)
@@ -34,32 +41,32 @@ class PreKeyManagerImpl(
     companion object {
         const val OTPK_BATCH_SIZE = 100
         const val OTPK_REPLENISH_THRESHOLD = 20
-        const val SIGNED_PREKEY_ID = 1 // Hardcoded to 1 for now, will rotate in the future
     }
 
     override suspend fun generateAndUploadInitialKeys() {
         // 1. Generate Signed PreKey
+        val signedPreKeyId = 1
+        secureStorage.putString(SecureStorageKeys.CURRENT_SIGNED_PREKEY_ID, signedPreKeyId.toString())
         val signedPreKeyPair = crypto.generateX25519KeyPair()
 
         secureStorage.putString(
-            SecureStorageKeys.signedPreKeyPrivate(SIGNED_PREKEY_ID),
+            SecureStorageKeys.signedPreKeyPrivate(signedPreKeyId),
             Base64.encode(signedPreKeyPair.privateKey)
         )
         secureStorage.putString(
-            SecureStorageKeys.signedPreKeyPublic(SIGNED_PREKEY_ID),
+            SecureStorageKeys.signedPreKeyPublic(signedPreKeyId),
             Base64.encode(signedPreKeyPair.publicKey)
         )
 
         // Fetch Identity Sign Private Key to sign the Signed PreKey
-        val identityPrivateSignBase64 =
-            secureStorage.getString(SecureStorageKeys.IDENTITY_PRIVATE_KEY_SIGN)
-                ?: throw Exception("Identity sign private key not found in storage")
+        val identityPrivateSignBase64 = secureStorage.getString(SecureStorageKeys.IDENTITY_PRIVATE_KEY_SIGN)
+            ?: throw Exception("Identity sign private key not found in storage")
         val identityPrivateSignBytes = Base64.decode(identityPrivateSignBase64)
 
         val signature = crypto.sign(identityPrivateSignBytes, signedPreKeyPair.publicKey)
 
         val signedPreKeyDto = SignedPreKeyDto(
-            keyId = SIGNED_PREKEY_ID,
+            keyId = signedPreKeyId,
             publicKey = Base64.encode(signedPreKeyPair.publicKey),
             signature = Base64.encode(signature)
         )
@@ -121,5 +128,50 @@ class PreKeyManagerImpl(
         }
 
         return dtos
+    }
+
+    override suspend fun rotateSignedPreKey() {
+        val currentIdStr = secureStorage.getString(SecureStorageKeys.CURRENT_SIGNED_PREKEY_ID) ?: "0"
+        val nextId = currentIdStr.toInt() + 1
+
+        val signedPreKeyPair = crypto.generateX25519KeyPair()
+
+        secureStorage.putString(
+            SecureStorageKeys.signedPreKeyPrivate(nextId),
+            Base64.encode(signedPreKeyPair.privateKey)
+        )
+        secureStorage.putString(
+            SecureStorageKeys.signedPreKeyPublic(nextId),
+            Base64.encode(signedPreKeyPair.publicKey)
+        )
+
+        val identityPrivateSignBase64 = secureStorage.getString(SecureStorageKeys.IDENTITY_PRIVATE_KEY_SIGN)
+            ?: throw Exception("Identity sign private key not found in storage")
+        val identityPrivateSignBytes = Base64.decode(identityPrivateSignBase64)
+
+        val signature = crypto.sign(identityPrivateSignBytes, signedPreKeyPair.publicKey)
+
+        val signedPreKeyDto = SignedPreKeyDto(
+            keyId = nextId,
+            publicKey = Base64.encode(signedPreKeyPair.publicKey),
+            signature = Base64.encode(signature)
+        )
+
+        // Upload the new signed prekey to the backend
+        val uploadResult = keysApi.upload(
+            UploadKeysRequest(
+                signedPreKey = signedPreKeyDto,
+                oneTimePreKeys = null // We are only rotating the SPK, not OTPKs
+            )
+        )
+
+        if (uploadResult.isSuccess) {
+            secureStorage.putString(SecureStorageKeys.CURRENT_SIGNED_PREKEY_ID, nextId.toString())
+        } else {
+            // Upload failed, remove the newly generated keys to prevent orphaned keys in storage
+            secureStorage.remove(SecureStorageKeys.signedPreKeyPrivate(nextId))
+            secureStorage.remove(SecureStorageKeys.signedPreKeyPublic(nextId))
+            println("Failed to rotate Signed PreKey.")
+        }
     }
 }

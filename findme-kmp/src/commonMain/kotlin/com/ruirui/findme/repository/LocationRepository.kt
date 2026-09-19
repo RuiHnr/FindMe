@@ -169,7 +169,8 @@ class LocationRepositoryImpl(
     }
 
     override suspend fun syncInbox() {
-        val inboxMessages = runCatching { locationApi.getInbox().getOrThrow() }.getOrElse { return }
+        val inboxResponse = runCatching { locationApi.getInbox().getOrThrow() }.getOrElse { return }
+        val inboxMessages = inboxResponse.messages
 
         val newLocations = _friendLocations.value.toMutableMap()
 
@@ -255,7 +256,11 @@ class LocationRepositoryImpl(
         _friendLocations.value = newLocations
 
         // 6. Check and replenish One-Time PreKeys if they were consumed
-        if (inboxMessages.isNotEmpty()) {
+        val remainingPreKeys = inboxResponse.remainingPreKeys
+        if (remainingPreKeys != null && remainingPreKeys < com.ruirui.findme.crypto.PreKeyManagerImpl.OTPK_REPLENISH_THRESHOLD) {
+            preKeyManager.replenishOneTimePreKeysIfNeeded()
+        } else if (remainingPreKeys == null && inboxMessages.isNotEmpty()) {
+            // Fallback for mock backend or older server versions
             preKeyManager.replenishOneTimePreKeysIfNeeded()
         }
     }

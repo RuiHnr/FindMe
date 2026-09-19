@@ -65,7 +65,10 @@ class NetworkApiTest {
                         respond(
                             content = """[{"sender_id": "alice", "encrypted_payload": {"type": "normal_message", "ciphertext": {"ratchetKey": [1,2,3], "msgNumber": 0, "previousChainLength": 0, "ciphertext": [1,2,3]}}}]""",
                             status = HttpStatusCode.OK,
-                            headers = headersOf(HttpHeaders.ContentType, "application/json")
+                            headers = headersOf(
+                                HttpHeaders.ContentType to listOf("application/json"),
+                                "X-Remaining-PreKeys" to listOf("99")
+                            )
                         )
                     }
                 }
@@ -88,8 +91,9 @@ class NetworkApiTest {
         assertTrue(inboxResult.isSuccess)
 
         val inbox = inboxResult.getOrNull()
-        assertEquals(1, inbox?.size)
-        assertEquals("alice", inbox?.first()?.senderId)
+        assertEquals(1, inbox?.messages?.size)
+        assertEquals("alice", inbox?.messages?.first()?.senderId)
+        assertEquals(99, inbox?.remainingPreKeys)
     }
 
     @Test
