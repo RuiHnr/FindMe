@@ -31,13 +31,15 @@ class LocationRepositoryTest {
 
         val friendRepo = FriendRepositoryImpl(FriendsApi(client))
 
+        val preKeyManager = com.ruirui.findme.crypto.PreKeyManagerImpl(crypto, storage, KeysApi(client))
         val repo = LocationRepositoryImpl(
             LocationApi(client),
             KeysApi(client),
             crypto,
             storage,
             SessionStoreImpl(storage, crypto),
-            friendRepo
+            friendRepo,
+            preKeyManager
         )
 
         // Sync empty inbox

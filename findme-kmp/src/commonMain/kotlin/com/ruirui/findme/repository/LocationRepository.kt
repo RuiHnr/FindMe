@@ -60,7 +60,8 @@ class LocationRepositoryImpl(
     private val crypto: Crypto,
     private val secureStorage: SecureStorage,
     private val sessionStore: SessionStore,
-    private val friendRepository: FriendRepository
+    private val friendRepository: FriendRepository,
+    private val preKeyManager: com.ruirui.findme.crypto.PreKeyManager
 ) : LocationRepository {
     // Maps a friend's userId to their last known location
     private val _friendLocations = MutableStateFlow<Map<String, LocationPayload>>(emptyMap())
@@ -252,5 +253,10 @@ class LocationRepositoryImpl(
 
         // 5. Push UI update
         _friendLocations.value = newLocations
+
+        // 6. Check and replenish One-Time PreKeys if they were consumed
+        if (inboxMessages.isNotEmpty()) {
+            preKeyManager.replenishOneTimePreKeysIfNeeded()
+        }
     }
 }

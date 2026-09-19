@@ -24,7 +24,7 @@ class FriendRepositoryTest {
         val repo = FriendRepositoryImpl(FriendsApi(client))
 
         // Add fake data
-        backend.friendsBackend.requestFriend("bob_id", "bob")
+        backend.friendsBackend.requestFriend("bob", "alice_id")
 
         repo.syncFriends().getOrThrow()
 

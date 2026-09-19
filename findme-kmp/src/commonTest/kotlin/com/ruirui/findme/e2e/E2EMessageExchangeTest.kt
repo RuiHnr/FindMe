@@ -32,9 +32,10 @@ class E2EMessageExchangeTest {
             aliceStorage,
             "http://localhost:8080"
         )
+        val alicePreKeyManager = com.ruirui.findme.crypto.PreKeyManagerImpl(crypto, aliceStorage, KeysApi(aliceClient))
         val aliceAuthRepo = AuthRepositoryImpl(
             AuthApi(aliceClient),
-            KeysApi(aliceClient),
+            alicePreKeyManager,
             aliceStorage,
             crypto,
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default)
@@ -46,7 +47,8 @@ class E2EMessageExchangeTest {
             crypto,
             aliceStorage,
             SessionStoreImpl(aliceStorage, crypto),
-            aliceFriendRepo
+            aliceFriendRepo,
+            alicePreKeyManager
         )
 
         // 3. Setup Bob
@@ -56,9 +58,10 @@ class E2EMessageExchangeTest {
             bobStorage,
             "http://localhost:8080"
         )
+        val bobPreKeyManager = com.ruirui.findme.crypto.PreKeyManagerImpl(crypto, bobStorage, KeysApi(bobClient))
         val bobAuthRepo = AuthRepositoryImpl(
             AuthApi(bobClient),
-            KeysApi(bobClient),
+            bobPreKeyManager,
             bobStorage,
             crypto,
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default)
@@ -70,7 +73,8 @@ class E2EMessageExchangeTest {
             crypto,
             bobStorage,
             SessionStoreImpl(bobStorage, crypto),
-            bobFriendRepo
+            bobFriendRepo,
+            bobPreKeyManager
         )
 
         // 4. Registration

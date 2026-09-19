@@ -20,8 +20,9 @@ class AuthRepositoryTest {
         val client = com.ruirui.findme.network.HttpClientFactory.create(backend.engine, storage, "http://localhost:8080")
         val crypto = CryptoKotlinAdapter()
 
+        val preKeyManager = com.ruirui.findme.crypto.PreKeyManagerImpl(crypto, storage, KeysApi(client))
         val authRepo = AuthRepositoryImpl(
-            AuthApi(client), KeysApi(client), storage, crypto, kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default)
+            AuthApi(client), preKeyManager, storage, crypto, kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default)
         )
 
         authRepo.register("testuser").getOrThrow()

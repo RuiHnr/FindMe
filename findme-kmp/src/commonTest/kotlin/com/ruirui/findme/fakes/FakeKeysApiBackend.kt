@@ -12,12 +12,16 @@ class FakeKeysApiBackend {
     val identityKeysSign = mutableMapOf<String, String>()
 
     fun uploadKeys(userId: String, request: UploadKeysRequest) {
+        val existingBundle = bundles[userId]
+        val signedPreKey = request.signedPreKey ?: existingBundle?.signedPreKey
+        ?: throw Exception("SignedPreKey required for initial upload")
+
         bundles[userId] = PreKeyBundleResponse(
             userId = userId,
-            identityKeyDh = identityKeysDh[userId] ?: "",
-            identityKeySign = identityKeysSign[userId] ?: "",
-            signedPreKey = request.signedPreKey!!,
-            oneTimePreKey = request.oneTimePreKeys?.firstOrNull()
+            identityKeyDh = identityKeysDh[userId] ?: existingBundle?.identityKeyDh ?: "",
+            identityKeySign = identityKeysSign[userId] ?: existingBundle?.identityKeySign ?: "",
+            signedPreKey = signedPreKey,
+            oneTimePreKey = request.oneTimePreKeys?.firstOrNull() ?: existingBundle?.oneTimePreKey
         )
     }
 

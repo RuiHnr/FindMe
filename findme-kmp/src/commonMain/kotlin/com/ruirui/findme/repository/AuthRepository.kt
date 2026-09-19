@@ -57,7 +57,7 @@ interface AuthRepository {
 
 class AuthRepositoryImpl(
     private val authApi: AuthApi,
-    private val keyApi: KeysApi,
+    private val preKeyManager: com.ruirui.findme.crypto.PreKeyManager,
     private val secureStorage: SecureStorage,
     private val crypto: Crypto,
     appScope: CoroutineScope
@@ -82,7 +82,6 @@ class AuthRepositoryImpl(
         // 1. Generate cryptographic identities
         val identityKeyPairDh = crypto.generateX25519KeyPair()
         val identityKeyPairSign = crypto.generateEd25519KeyPair()
-        val signedPreKeyPair = crypto.generateX25519KeyPair()
 
         val publicKeyDhBase64 = Base64.encode(identityKeyPairDh.publicKey)
         val privateKeyDhBase64 = Base64.encode(identityKeyPairDh.privateKey)
@@ -105,28 +104,11 @@ class AuthRepositoryImpl(
         secureStorage.putString(IDENTITY_PUBLIC_KEY_DH, publicKeyDhBase64)
         secureStorage.putString(IDENTITY_PRIVATE_KEY_SIGN, privateKeySignBase64)
         secureStorage.putString(IDENTITY_PUBLIC_KEY_SIGN, publicKeySignBase64)
-        secureStorage.putString(
-            SecureStorageKeys.signedPreKeyPrivate(1),
-            Base64.encode(signedPreKeyPair.privateKey)
-        )
-        secureStorage.putString(
-            SecureStorageKeys.signedPreKeyPublic(1),
-            Base64.encode(signedPreKeyPair.publicKey)
-        )
 
-        // 2. Sign the signed prekey with our Identity private key and upload to backend
-        val sign = crypto.sign(identityKeyPairSign.privateKey, signedPreKeyPair.publicKey)
-        keyApi.upload(
-            UploadKeysRequest(
-                SignedPreKeyDto(
-                    1,
-                    Base64.encode(signedPreKeyPair.publicKey),
-                    Base64.encode(sign)
-                )
-            )
-        ).getOrThrow()
+        // 4. Generate and Upload PreKeys (Signed PreKey + OTPKs)
+        preKeyManager.generateAndUploadInitialKeys()
 
-        // 4. Update UI State
+        // 5. Update UI State
         _authState.value = AuthState.Authenticated(response.userId)
     }
 
