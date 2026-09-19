@@ -1,0 +1,39 @@
+CREATE TABLE friend (
+    user_id TEXT NOT NULL PRIMARY KEY,
+    username TEXT NOT NULL,
+    added_at INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE friend_request (
+    target_username TEXT NOT NULL PRIMARY KEY,
+    direction TEXT NOT NULL DEFAULT 'inbound',
+    created_at INTEGER NOT NULL DEFAULT 0
+);
+
+-- Queries
+
+getAllFriends:
+SELECT * FROM friend ORDER BY username ASC;
+
+insertFriend:
+INSERT OR REPLACE INTO friend (user_id, username, added_at)
+VALUES(?, ?, ?);
+
+deleteFriend:
+DELETE FROM friend WHERE user_id = ?;
+
+deleteAllFriends:
+DELETE FROM friend;
+
+getAllFriendRequests:
+SELECT * FROM friend_request WHERE direction = 'inbound' ORDER BY created_at DESC;
+
+insertFriendRequest:
+INSERT OR REPLACE INTO friend_request (target_username, direction, created_at)
+VALUES (?, ?, ?);
+
+deleteFriendRequest:
+DELETE FROM friend_request WHERE target_username = ?;
+
+deleteAllFriendRequests:
+DELETE FROM friend_request;

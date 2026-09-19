@@ -3,6 +3,7 @@ package com.ruirui.findme.repository
 import com.ruirui.findme.fakes.FakeBackend
 import com.ruirui.findme.network.api.FriendsApi
 import com.ruirui.findme.storage.InMemorySecureStorage
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -21,15 +22,20 @@ class FriendRepositoryTest {
             "http://localhost:8080"
         )
 
-        val repo = FriendRepositoryImpl(FriendsApi(client))
+        val db = com.ruirui.findme.db.createTestDatabase()
+        val repo = FriendRepositoryImpl(FriendsApi(client), db, backgroundScope)
 
         // Add fake data
         backend.friendsBackend.requestFriend("bob", "alice_id")
 
         repo.syncFriends().getOrThrow()
 
-        assertEquals(1, repo.friendRequests.value.size)
-        assertEquals("bob", repo.friendRequests.value[0].targetUsername)
+        val inDb = db.friendQueries.getAllFriendRequests().executeAsList()
+        assertEquals(1, inDb.size, "Database should contain 1 request but had: $inDb")
+
+        val requests = repo.friendRequests.first { it.isNotEmpty() }
+        assertEquals(1, requests.size)
+        assertEquals("bob", requests[0].targetUsername)
     }
 
     @Test
@@ -43,10 +49,12 @@ class FriendRepositoryTest {
             "http://localhost:8080"
         )
 
-        val repo = FriendRepositoryImpl(FriendsApi(client))
+        val db = com.ruirui.findme.db.createTestDatabase()
+        val repo = FriendRepositoryImpl(FriendsApi(client), db, backgroundScope)
 
         // Accept
         repo.acceptFriendRequest("bob", "bob_id").getOrThrow()
+        testScheduler.advanceUntilIdle()
 
         // It shouldn't crash, and should sync
         assertTrue(true)

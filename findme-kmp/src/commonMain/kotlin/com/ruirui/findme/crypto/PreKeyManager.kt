@@ -1,11 +1,13 @@
 package com.ruirui.findme.crypto
 
+import com.ruirui.findme.db.FindMeDatabase
 import com.ruirui.findme.models.OneTimePreKeyDto
 import com.ruirui.findme.models.SignedPreKeyDto
 import com.ruirui.findme.models.UploadKeysRequest
 import com.ruirui.findme.network.api.KeysApi
 import com.ruirui.findme.storage.SecureStorage
 import com.ruirui.findme.storage.SecureStorageKeys
+import io.ktor.util.date.getTimeMillis
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.random.Random
@@ -29,24 +31,28 @@ interface PreKeyManager {
      * The old Signed PreKey is intentionally kept in storage to decrypt delayed incoming messages.
      */
     suspend fun rotateSignedPreKey()
+
+    companion object {
+        const val OTPK_BATCH_SIZE = 100
+        const val OTPK_REPLENISH_THRESHOLD = 20
+    }
 }
 
 @OptIn(ExperimentalEncodingApi::class)
 class PreKeyManagerImpl(
     private val crypto: Crypto,
     private val secureStorage: SecureStorage,
-    private val keysApi: KeysApi
+    private val keysApi: KeysApi,
+    private val db: FindMeDatabase
 ) : PreKeyManager {
-
-    companion object {
-        const val OTPK_BATCH_SIZE = 100
-        const val OTPK_REPLENISH_THRESHOLD = 20
-    }
 
     override suspend fun generateAndUploadInitialKeys() {
         // 1. Generate Signed PreKey
         val signedPreKeyId = 1
-        secureStorage.putString(SecureStorageKeys.CURRENT_SIGNED_PREKEY_ID, signedPreKeyId.toString())
+        secureStorage.putString(
+            SecureStorageKeys.CURRENT_SIGNED_PREKEY_ID,
+            signedPreKeyId.toString()
+        )
         val signedPreKeyPair = crypto.generateX25519KeyPair()
 
         secureStorage.putString(
@@ -59,8 +65,9 @@ class PreKeyManagerImpl(
         )
 
         // Fetch Identity Sign Private Key to sign the Signed PreKey
-        val identityPrivateSignBase64 = secureStorage.getString(SecureStorageKeys.IDENTITY_PRIVATE_KEY_SIGN)
-            ?: throw Exception("Identity sign private key not found in storage")
+        val identityPrivateSignBase64 =
+            secureStorage.getString(SecureStorageKeys.IDENTITY_PRIVATE_KEY_SIGN)
+                ?: throw Exception("Identity sign private key not found in storage")
         val identityPrivateSignBytes = Base64.decode(identityPrivateSignBase64)
 
         val signature = crypto.sign(identityPrivateSignBytes, signedPreKeyPair.publicKey)
@@ -72,7 +79,7 @@ class PreKeyManagerImpl(
         )
 
         // 2. Generate One-Time PreKeys
-        val oneTimePreKeys = generateOneTimePreKeys(OTPK_BATCH_SIZE)
+        val oneTimePreKeys = generateOneTimePreKeys(PreKeyManager.OTPK_BATCH_SIZE)
 
         // 3. Upload to backend
         keysApi.upload(
@@ -89,8 +96,8 @@ class PreKeyManagerImpl(
 
         val count = result.getOrThrow().remainingOneTimePrekeys
 
-        if (count < OTPK_REPLENISH_THRESHOLD) {
-            val amountToGenerate = (OTPK_BATCH_SIZE - count).toInt()
+        if (count < PreKeyManager.OTPK_REPLENISH_THRESHOLD) {
+            val amountToGenerate = (PreKeyManager.OTPK_BATCH_SIZE - count).toInt()
             if (amountToGenerate <= 0) return
 
             val newKeys = generateOneTimePreKeys(amountToGenerate)
@@ -114,9 +121,10 @@ class PreKeyManagerImpl(
             val keyPair = crypto.generateX25519KeyPair()
 
             // Persist the private key locally
-            secureStorage.putString(
-                SecureStorageKeys.oneTimePreKeyPrivate(keyId),
-                Base64.encode(keyPair.privateKey)
+            db.oneTimePreKeyQueries.insertKey(
+                key_id = keyId.toLong(),
+                private_key_base64 = Base64.encode(keyPair.privateKey),
+                created_at = getTimeMillis()
             )
 
             dtos.add(
@@ -131,7 +139,8 @@ class PreKeyManagerImpl(
     }
 
     override suspend fun rotateSignedPreKey() {
-        val currentIdStr = secureStorage.getString(SecureStorageKeys.CURRENT_SIGNED_PREKEY_ID) ?: "0"
+        val currentIdStr =
+            secureStorage.getString(SecureStorageKeys.CURRENT_SIGNED_PREKEY_ID) ?: "0"
         val nextId = currentIdStr.toInt() + 1
 
         val signedPreKeyPair = crypto.generateX25519KeyPair()
@@ -145,8 +154,9 @@ class PreKeyManagerImpl(
             Base64.encode(signedPreKeyPair.publicKey)
         )
 
-        val identityPrivateSignBase64 = secureStorage.getString(SecureStorageKeys.IDENTITY_PRIVATE_KEY_SIGN)
-            ?: throw Exception("Identity sign private key not found in storage")
+        val identityPrivateSignBase64 =
+            secureStorage.getString(SecureStorageKeys.IDENTITY_PRIVATE_KEY_SIGN)
+                ?: throw Exception("Identity sign private key not found in storage")
         val identityPrivateSignBytes = Base64.decode(identityPrivateSignBase64)
 
         val signature = crypto.sign(identityPrivateSignBytes, signedPreKeyPair.publicKey)

@@ -4,15 +4,28 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class FriendDto(val userId: String)
+enum class RequestDirection {
+    @SerialName("inbound")
+    INBOUND,
+    @SerialName("outbound")
+    OUTBOUND
+}
+
+@Serializable
+data class FriendDto(
+    val userId: String,
+    val username: String = ""
+)
 
 /**
- * Payload sent by an authenticated user to initiate a friend request by username.
+ * Payload sent by an authenticated user to initiate a friend request by username,
+ * or received when syncing pending friend requests.
  */
 @Serializable
 data class FriendRequest(
     @SerialName("target_username")
-    val targetUsername: String
+    val targetUsername: String,
+    val direction: RequestDirection = RequestDirection.INBOUND
 )
 
 /**

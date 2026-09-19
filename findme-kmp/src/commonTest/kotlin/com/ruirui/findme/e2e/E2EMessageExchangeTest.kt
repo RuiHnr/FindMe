@@ -11,6 +11,7 @@ import com.ruirui.findme.repository.AuthRepositoryImpl
 import com.ruirui.findme.repository.FriendRepositoryImpl
 import com.ruirui.findme.repository.LocationRepositoryImpl
 import com.ruirui.findme.storage.InMemorySecureStorage
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -32,7 +33,8 @@ class E2EMessageExchangeTest {
             aliceStorage,
             "http://localhost:8080"
         )
-        val alicePreKeyManager = com.ruirui.findme.crypto.PreKeyManagerImpl(crypto, aliceStorage, KeysApi(aliceClient))
+        val aliceDb = com.ruirui.findme.db.createTestDatabase()
+        val alicePreKeyManager = com.ruirui.findme.crypto.PreKeyManagerImpl(crypto, aliceStorage, KeysApi(aliceClient), aliceDb)
         val aliceAuthRepo = AuthRepositoryImpl(
             AuthApi(aliceClient),
             alicePreKeyManager,
@@ -40,15 +42,16 @@ class E2EMessageExchangeTest {
             crypto,
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default)
         )
-        val aliceFriendRepo = FriendRepositoryImpl(FriendsApi(aliceClient))
+        val aliceFriendRepo = FriendRepositoryImpl(FriendsApi(aliceClient), aliceDb, backgroundScope)
         val aliceLocationRepo = LocationRepositoryImpl(
             LocationApi(aliceClient),
             KeysApi(aliceClient),
             crypto,
             aliceStorage,
             SessionStoreImpl(aliceStorage, crypto),
-            aliceFriendRepo,
-            alicePreKeyManager
+            alicePreKeyManager,
+            aliceDb,
+            backgroundScope
         )
 
         // 3. Setup Bob
@@ -58,7 +61,8 @@ class E2EMessageExchangeTest {
             bobStorage,
             "http://localhost:8080"
         )
-        val bobPreKeyManager = com.ruirui.findme.crypto.PreKeyManagerImpl(crypto, bobStorage, KeysApi(bobClient))
+        val bobDb = com.ruirui.findme.db.createTestDatabase()
+        val bobPreKeyManager = com.ruirui.findme.crypto.PreKeyManagerImpl(crypto, bobStorage, KeysApi(bobClient), bobDb)
         val bobAuthRepo = AuthRepositoryImpl(
             AuthApi(bobClient),
             bobPreKeyManager,
@@ -66,15 +70,16 @@ class E2EMessageExchangeTest {
             crypto,
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default)
         )
-        val bobFriendRepo = FriendRepositoryImpl(FriendsApi(bobClient))
+        val bobFriendRepo = FriendRepositoryImpl(FriendsApi(bobClient), bobDb, backgroundScope)
         val bobLocationRepo = LocationRepositoryImpl(
             LocationApi(bobClient),
             KeysApi(bobClient),
             crypto,
             bobStorage,
             SessionStoreImpl(bobStorage, crypto),
-            bobFriendRepo,
-            bobPreKeyManager
+            bobPreKeyManager,
+            bobDb,
+            backgroundScope
         )
 
         // 4. Registration
@@ -106,13 +111,14 @@ class E2EMessageExchangeTest {
         aliceFriendRepoReal.syncFriends().getOrThrow()
 
         // 6. Alice sends first location (Triggers X3DH)
-        aliceLocationRepoReal.submitLocalLocation(lat = 12.34, lng = 56.78)
+        aliceLocationRepoReal.submitLocalLocation(lat = 12.34, lng = 56.78).getOrThrow()
 
         // 7. Bob syncs his inbox
-        bobLocationRepoReal.syncInbox()
+        bobLocationRepoReal.syncInbox().getOrThrow()
+        testScheduler.advanceUntilIdle()
 
         // 8. Assertions
-        val bobMap = bobLocationRepoReal.friendLocations.value
+        val bobMap = bobLocationRepoReal.friendLocations.first { it.isNotEmpty() }
         assertTrue(bobMap.containsKey(aliceId), "Bob should have Alice's location")
 
         val aliceLocation = bobMap[aliceId]

@@ -29,21 +29,23 @@ class LocationRepositoryTest {
         // Set user ID so syncInbox can fetch it
         storage.putString(SecureStorageKeys.USER_ID, "alice_id")
 
-        val friendRepo = FriendRepositoryImpl(FriendsApi(client))
+        val db = com.ruirui.findme.db.createTestDatabase()
+        val friendRepo = FriendRepositoryImpl(FriendsApi(client), db, backgroundScope)
 
-        val preKeyManager = com.ruirui.findme.crypto.PreKeyManagerImpl(crypto, storage, KeysApi(client))
+        val preKeyManager = com.ruirui.findme.crypto.PreKeyManagerImpl(crypto, storage, KeysApi(client), db)
         val repo = LocationRepositoryImpl(
             LocationApi(client),
             KeysApi(client),
             crypto,
             storage,
             SessionStoreImpl(storage, crypto),
-            friendRepo,
-            preKeyManager
+            preKeyManager,
+            db,
+            backgroundScope
         )
 
         // Sync empty inbox
-        repo.syncInbox()
+        repo.syncInbox().getOrThrow()
 
         // Inbox should be empty map
         assertTrue(repo.friendLocations.value.isEmpty())

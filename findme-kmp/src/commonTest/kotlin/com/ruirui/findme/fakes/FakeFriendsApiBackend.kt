@@ -20,17 +20,17 @@ class FakeFriendsApiBackend {
         // For testing, we assume targetUsername == targetId
         val targetId = targetUsername
         val list = requests.getOrPut(targetId) { mutableListOf() }
-        list.add(FriendRequest(senderUsername))
+        list.add(FriendRequest(senderUsername, com.ruirui.findme.models.RequestDirection.INBOUND))
     }
 
     fun acceptFriend(userId: String, requestId: String) {
         val senderId = requestId
 
         // Add to user's friends
-        friends.getOrPut(userId) { mutableListOf() }.add(FriendDto(senderId))
+        friends.getOrPut(userId) { mutableListOf() }.add(FriendDto(senderId, senderId))
 
         // Add to sender's friends
-        friends.getOrPut(senderId) { mutableListOf() }.add(FriendDto(userId))
+        friends.getOrPut(senderId) { mutableListOf() }.add(FriendDto(userId, userId))
 
         // Remove request
         requests[userId]?.removeAll { it.targetUsername == requestId }

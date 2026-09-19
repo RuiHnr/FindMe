@@ -1,0 +1,23 @@
+CREATE TABLE one_time_prekey (
+    key_id INTEGER NOT NULL PRIMARY KEY,
+    private_key_base64 TEXT NOT NULL,
+    created_at INTEGER NOT NULL DEFAULT 0
+);
+
+-- Queries
+
+getPrivateKey:
+SELECT private_key_base64 FROM one_time_prekey WHERE key_id = ?;
+
+insertKey:
+INSERT OR IGNORE INTO one_time_prekey (key_id, private_key_base64, created_at)
+VALUES (?, ?, ?);
+
+deleteKey:
+DELETE FROM one_time_prekey WHERE key_id = ?;
+
+countKeys:
+SELECT COUNT(*) FROM one_time_prekey;
+
+deleteAll:
+DELETE FROM one_time_prekey;
