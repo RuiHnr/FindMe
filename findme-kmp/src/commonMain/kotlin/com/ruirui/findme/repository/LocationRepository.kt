@@ -275,9 +275,6 @@ class LocationRepositoryImpl(
             // 2. Decrypt message using Ratchet
             val encrypted = envelope.ciphertext
 
-            // If it's a completely empty message (e.g. initial handshake with no location), skip processing
-            if (encrypted.ciphertext.isEmpty()) return@runCatching
-
             val decryptedBytes = session.decrypt(encrypted)
             val jsonString = decryptedBytes.decodeToString()
 

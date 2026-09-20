@@ -105,8 +105,13 @@ FindMe/
 
 ### Step 8: Production E2EE Enhancements (Upcoming)
 
-- [ ] **One-Time PreKey (OTPK) Management**: Generate batch OTPKs on registration, upload to backend, and delete local private keys upon usage for true Perfect Forward Secrecy.
-- [ ] **Local SQLDelight Database**: Replace purely in-memory `FriendDto` state with persisted DB tables for offline friend lists and location history.
-- [ ] **TOFU Identity Pinning**: Cache friend Identity Keys in the local database to detect Man-In-The-Middle attacks or device resets.
-- [ ] **Session Healing**: Automatically trigger a new X3DH handshake if Double Ratchet decryption fails repeatedly.
-- [ ] **Background Sync**: Integrate Push Notifications (FCM / APNs) to trigger headless inbox synchronization.
+- [x] **One-Time PreKey (OTPK) Management**: Generate batch OTPKs on registration, upload to
+  backend, and delete local private keys upon usage for true Perfect Forward Secrecy.
+- [x] **Local SQLDelight Database**: Replace purely in-memory `FriendDto` state with persisted DB
+  tables for offline friend lists and location history.
+- [ ] **TOFU Identity Pinning**: Cache friend Identity Keys in the local database to detect
+  Man-In-The-Middle attacks or device resets.
+- [ ] **Session Healing**: Automatically trigger a new X3DH handshake if Double Ratchet decryption
+  fails repeatedly.
+- [ ] **Background Sync**: Integrate Push Notifications (FCM / APNs) to trigger headless inbox
+  synchronization.
