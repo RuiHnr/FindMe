@@ -12,9 +12,11 @@ async fn test_complete_friend_and_location_lifecycle(pool: sqlx::PgPool) {
 
     // 2. Alice attempts to send location before friendship -> Fails
     let res = app
-        .send_location(&alice.token, bob.user_id, "early_secret")
+        .send_location(&alice.token, vec![bob.user_id], "early_secret")
         .await;
-    assert_eq!(res.status_code(), StatusCode::FORBIDDEN);
+    assert_eq!(res.status_code(), StatusCode::OK);
+    let json: findme_backend::models::SubmitLocationResponse = res.json();
+    assert_eq!(json.accepted, 0);
 
     // 3. Alice requests Bob as friend
     let res = app.send_friend_request(&alice.token, "bob").await;
@@ -26,7 +28,7 @@ async fn test_complete_friend_and_location_lifecycle(pool: sqlx::PgPool) {
 
     // 5. Alice sends location to Bob -> Succeeds
     let res = app
-        .send_location(&alice.token, bob.user_id, "real_secret_location")
+        .send_location(&alice.token, vec![bob.user_id], "real_secret_location")
         .await;
     assert_eq!(res.status_code(), StatusCode::OK);
 

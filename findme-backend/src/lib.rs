@@ -5,6 +5,7 @@ pub mod models;
 
 use crate::auth::auth_middleware;
 use axum::middleware::from_fn_with_state;
+use axum::routing::delete;
 use axum::{
     Router,
     routing::{get, post, put},
@@ -38,6 +39,9 @@ pub fn build_router(state: AppState) -> Router {
         .route("/keys/count", get(handlers::keys::get_key_count))
         .route("/keys/{user_id}", get(handlers::keys::get_prekey_bundle))
         .route_layer(from_fn_with_state(state.clone(), auth_middleware))
+        // Presence
+        .route("/presence", post(handlers::presence::heartbeat))
+        .route("/presence", delete(handlers::presence::remove))
         // All endpoints below are not authenticated via JWT
         .route(
             "/",

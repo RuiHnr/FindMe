@@ -1,4 +1,4 @@
-use crate::models::SubmitLocationRequest;
+use crate::models::{SubmitLocationRequest, SubmitLocationResponse};
 use crate::{AppState, db};
 use axum::{
     Extension, Json,
@@ -13,25 +13,30 @@ use uuid::Uuid;
 pub(crate) async fn receive_location(
     State(state): State<AppState>,
     Extension(authenticated_user): Extension<Uuid>,
-    Json(payload): Json<SubmitLocationRequest>,
+    Json(payloads): Json<Vec<SubmitLocationRequest>>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    if !db::are_friends(&state.db, authenticated_user, payload.receiver_id)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-    {
-        return Err(StatusCode::FORBIDDEN);
+    let mut accepted = 0;
+
+    for payload in &payloads {
+        // Only insert if sender and receiver are confirmed friends
+        let are_friends = db::are_friends(&state.db, authenticated_user, payload.receiver_id)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        if are_friends {
+            db::insert_location(
+                &state.db,
+                &authenticated_user,
+                &payload.receiver_id,
+                &payload.encrypted_blob,
+            )
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            accepted += 1;
+        }
     }
 
-    db::insert_location(
-        &state.db,
-        &authenticated_user,
-        &payload.receiver_id,
-        &payload.encrypted_blob,
-    )
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    Ok(StatusCode::OK)
+    Ok((StatusCode::OK, Json(SubmitLocationResponse { accepted })).into_response())
 }
 
 /// Retrieves and consumes all pending location messages for the authenticated user.

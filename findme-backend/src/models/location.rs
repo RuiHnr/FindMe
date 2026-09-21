@@ -8,6 +8,13 @@ pub struct SubmitLocationRequest {
     pub encrypted_blob: String,
 }
 
+/// Response when submitting location(s) to the inbox.
+/// Includes the number of accepted payloads.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct SubmitLocationResponse {
+    pub accepted: usize,
+}
+
 /// Location data a user receives in his/her inbox
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, sqlx::FromRow)]
 pub struct InboxMessage {

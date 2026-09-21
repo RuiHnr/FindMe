@@ -46,3 +46,9 @@ Table onetime_prekeys {
   }
 }
 
+Table active_sessions {
+  user_id uuid [pk, ref: > users.id]
+  last_heartbeat timestampz [not null, default: `now()`]
+}
+
+
