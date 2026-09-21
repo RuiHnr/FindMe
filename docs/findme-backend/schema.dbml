@@ -51,4 +51,8 @@ Table active_sessions {
   last_heartbeat timestampz [not null, default: `now()`]
 }
 
-
+Table device_tokens {
+  user_id uuid [pk, ref: > users.id]
+  fcm_token varchar
+  apns_token varchar
+}

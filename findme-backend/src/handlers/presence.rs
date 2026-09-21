@@ -14,7 +14,25 @@ pub(crate) async fn heartbeat(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    // TODO: Send Push Notification to user's friends with PresenceNotification
+    let friends = db::get_friends_by_id(&state.db, authenticated_user)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    for friend in friends {
+        let device_token = db::get_device_token(&state.db, friend.user_id)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        // Send silent push notification if we have a push_service and a token
+        if let (Some(push_service), Some(tokens)) = (&state.push_service, device_token) {
+            if let Some(fcm) = tokens.fcm_token {
+                let _ = push_service.send_fcm_wake_up(&fcm).await;
+            } else if let Some(apns) = tokens.apns_token {
+                let _ = push_service.send_apns_wake_up(&apns).await;
+            }
+        }
+    }
+
     Ok(StatusCode::OK)
 }
 

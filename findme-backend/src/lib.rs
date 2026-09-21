@@ -2,6 +2,7 @@ pub mod auth;
 pub mod db;
 pub mod handlers;
 pub mod models;
+pub mod push_service;
 
 use crate::auth::auth_middleware;
 use axum::middleware::from_fn_with_state;
@@ -15,6 +16,7 @@ use axum::{
 pub struct AppState {
     pub db: sqlx::PgPool,
     pub jwt_secret: String,
+    pub push_service: Option<std::sync::Arc<push_service::PushService>>,
 }
 
 /// Defines all Endpoints and returns the router.

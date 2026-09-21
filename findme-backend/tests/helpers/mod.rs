@@ -17,6 +17,7 @@ pub async fn spawn_app(pool: PgPool) -> TestApp {
     let state = AppState {
         db: pool.clone(),
         jwt_secret: "test_secret_key".to_string(),
+        push_service: None,
     };
 
     let app = build_router(state);

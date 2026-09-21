@@ -1,3 +1,4 @@
+use findme_backend::push_service::PushService;
 use findme_backend::{AppState, build_router};
 use sqlx::postgres::PgPoolOptions;
 
@@ -28,10 +29,14 @@ async fn main() {
         .await
         .expect("Failed to run database migrations");
 
+    // Initialize Push Service if credentials are provided
+    let push_service = PushService::new().ok().map(std::sync::Arc::new);
+
     // Define App State
     let state = AppState {
         db: pool,
         jwt_secret,
+        push_service,
     };
 
     // ===== API-SETUP =====

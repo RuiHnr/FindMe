@@ -20,6 +20,11 @@ jsonwebtoken = { version = "11.0.0", features = ["rust_crypto"] }
 chrono = "0.4.44"
 # for .env
 dotenvy = "0.15"
+# for Android Push Notification
+reqwest = { version = "0.13.5", features = ["json"] }
+# for IOS Push Notification
+a2 = "0.10"
+serde_json = "1.0.151"
 
 [dev-dependencies]
 axum-test = "21.0.0"
