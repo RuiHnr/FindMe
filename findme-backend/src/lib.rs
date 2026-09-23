@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod db;
+pub mod error;
 pub mod handlers;
 pub mod models;
 pub mod push_service;
@@ -36,14 +37,14 @@ pub fn build_router(state: AppState) -> Router {
             "/friends/requests/{id}/accept",
             put(handlers::friends::accept_friend),
         )
+        // Presence
+        .route("/presence", post(handlers::presence::heartbeat))
+        .route("/presence", delete(handlers::presence::remove))
         // Keys
         .route("/keys", post(handlers::keys::upload_keys))
         .route("/keys/count", get(handlers::keys::get_key_count))
         .route("/keys/{user_id}", get(handlers::keys::get_prekey_bundle))
         .route_layer(from_fn_with_state(state.clone(), auth_middleware))
-        // Presence
-        .route("/presence", post(handlers::presence::heartbeat))
-        .route("/presence", delete(handlers::presence::remove))
         // All endpoints below are not authenticated via JWT
         .route(
             "/",

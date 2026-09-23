@@ -3,9 +3,18 @@ use a2::{
     NotificationOptions, Priority, PushType,
 };
 use reqwest::Client as HttpClient;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::env;
 use std::fs::File;
+
+/// The two modes the client operates in based on whether any friend is watching
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum SyncMode {
+    High,
+    Low,
+}
 
 /// Manages HTTP/2 connection pools to Google FCM and Apple APNs.
 /// This should be instantiated once at startup and wrapped in an Arc
@@ -53,7 +62,7 @@ impl PushService {
     pub async fn send_fcm_sync_action(
         &self,
         fcm_token: &str,
-        mode: &str,
+        mode: SyncMode,
     ) -> Result<(), reqwest::Error> {
         let url = format!(
             "https://fcm.googleapis.com/v1/projects/{}/messages:send",
@@ -85,7 +94,7 @@ impl PushService {
     pub async fn send_apns_sync_action(
         &self,
         apns_token: &str,
-        mode: &str,
+        mode: SyncMode,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Apple strictly requires Priority::Normal and PushType::Background for silent pushes
         let options = NotificationOptions {

@@ -1,3 +1,4 @@
+use crate::error::IntoStatusCode;
 use crate::models::{SubmitLocationRequest, SubmitLocationResponse};
 use crate::{AppState, db};
 use axum::{
@@ -21,7 +22,7 @@ pub(crate) async fn receive_location(
         // Only insert if sender and receiver are confirmed friends
         let are_friends = db::are_friends(&state.db, authenticated_user, payload.receiver_id)
             .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            .or_500()?;
 
         if are_friends {
             db::insert_location(
@@ -31,7 +32,7 @@ pub(crate) async fn receive_location(
                 &payload.encrypted_blob,
             )
             .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            .or_500()?;
             accepted += 1;
         }
     }
@@ -46,13 +47,9 @@ pub(crate) async fn get_inbox(
     State(state): State<AppState>,
     Extension(authenticated_user): Extension<Uuid>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let messages = match db::fetch_inbox(&state.db, authenticated_user).await {
-        Ok(m) => m,
-        Err(e) => {
-            eprintln!("DB-Error fetching inbox: {}", e);
-            return Err(StatusCode::INTERNAL_SERVER_ERROR);
-        }
-    };
+    let messages = db::fetch_inbox(&state.db, authenticated_user)
+        .await
+        .or_500()?;
 
     let remaining_keys = db::count_onetime_prekeys(&state.db, authenticated_user)
         .await
