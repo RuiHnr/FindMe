@@ -46,7 +46,17 @@ jobs:
         with:
           toolchain: stable
           components: rustfmt, clippy
-          cache-work-dir: findme-backend
+      - name: Cache Cargo registry & build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            findme-backend/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('findme-backend/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
       - name: Check code formatting
         run: cargo fmt --all --check
       - name: Lint with Clippy

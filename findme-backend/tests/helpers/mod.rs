@@ -17,6 +17,7 @@ pub async fn spawn_app(pool: PgPool) -> TestApp {
     let state = AppState {
         db: pool.clone(),
         jwt_secret: "test_secret_key".to_string(),
+        push_service: None,
     };
 
     let app = build_router(state);
@@ -69,16 +70,21 @@ impl TestApp {
     pub async fn send_location(
         &self,
         token: &str,
-        receiver_id: Uuid,
+        receiver_ids: Vec<Uuid>,
         payload: &str,
     ) -> TestResponse {
+        let payloads: Vec<SubmitLocationRequest> = receiver_ids
+            .iter()
+            .map(|id| SubmitLocationRequest {
+                receiver_id: *id,
+                encrypted_blob: payload.to_string(),
+            })
+            .collect();
+
         self.server
             .post("/inbox")
             .add_header("Authorization", format!("Bearer {}", token))
-            .json(&SubmitLocationRequest {
-                receiver_id,
-                encrypted_blob: payload.to_string(),
-            })
+            .json(&payloads)
             .await
     }
 
