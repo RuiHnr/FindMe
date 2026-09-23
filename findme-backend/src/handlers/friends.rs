@@ -1,3 +1,4 @@
+use crate::error::IntoStatusCode;
 use crate::models::FriendRequest;
 use crate::{AppState, db};
 use axum::{
@@ -13,7 +14,7 @@ pub(crate) async fn request_friend(
     State(state): State<AppState>,
     Extension(authenticated_user): Extension<Uuid>,
     Json(payload): Json<FriendRequest>,
-) -> Result<impl IntoResponse, StatusCode> {
+) -> Result<StatusCode, StatusCode> {
     let target_id = db::get_user_id_by_name(&state.db, &payload.target_username)
         .await
         .map_err(|_| StatusCode::BAD_REQUEST)?
@@ -21,7 +22,7 @@ pub(crate) async fn request_friend(
 
     db::send_friend_request(&state.db, authenticated_user, target_id)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .or_500()?;
 
     Ok(StatusCode::OK)
 }
@@ -31,10 +32,10 @@ pub(crate) async fn accept_friend(
     State(state): State<AppState>,
     Extension(authenticated_user): Extension<Uuid>,
     Path(requester_id): Path<Uuid>,
-) -> Result<impl IntoResponse, StatusCode> {
+) -> Result<StatusCode, StatusCode> {
     db::accept_friend_request(&state.db, authenticated_user, requester_id)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .or_500()?;
 
     Ok(StatusCode::OK)
 }
@@ -46,7 +47,7 @@ pub(crate) async fn get_friends(
 ) -> Result<impl IntoResponse, StatusCode> {
     let friends = db::get_friends_by_id(&state.db, authenticated_user)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .or_500()?;
 
     Ok((StatusCode::OK, Json(friends)).into_response())
 }
@@ -58,6 +59,6 @@ pub(crate) async fn get_friend_requests(
 ) -> Result<impl IntoResponse, StatusCode> {
     let friend_requests = db::get_friend_requests_by_id(&state.db, authenticated_user)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .or_500()?;
     Ok((StatusCode::OK, Json(friend_requests)).into_response())
 }

@@ -9,9 +9,11 @@ async fn test_non_friend_cannot_send_location(pool: sqlx::PgPool) {
 
     // Try to send without being friends
     let res = app
-        .send_location(&alice.token, bob.user_id, "secret_blob")
+        .send_location(&alice.token, vec![bob.user_id], "secret_blob")
         .await;
 
-    // Should be rejected
-    assert_eq!(res.status_code(), StatusCode::FORBIDDEN);
+    // Should be rejected (0 accepted payloads)
+    assert_eq!(res.status_code(), StatusCode::OK);
+    let json: findme_backend::models::SubmitLocationResponse = res.json();
+    assert_eq!(json.accepted, 0);
 }

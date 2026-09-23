@@ -1,3 +1,4 @@
+use crate::error::IntoStatusCode;
 use crate::models::{KeyCountResponse, UploadKeysRequest};
 use crate::{AppState, db};
 use axum::{
@@ -17,19 +18,13 @@ pub(crate) async fn upload_keys(
     if let Some(signed_prekey) = &payload.signed_prekey {
         db::upsert_signed_prekey(&state.db, authenticated_user, signed_prekey)
             .await
-            .map_err(|e| {
-                eprintln!("DB-Error uploading signed prekey: {}", e);
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?;
+            .or_500()?;
     }
 
     if let Some(one_time_prekeys) = &payload.one_time_prekeys {
         db::insert_onetime_prekeys(&state.db, authenticated_user, one_time_prekeys)
             .await
-            .map_err(|e| {
-                eprintln!("DB-Error uploading one-time prekeys: {}", e);
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?;
+            .or_500()?;
     }
 
     Ok(StatusCode::OK)
@@ -46,20 +41,17 @@ pub(crate) async fn get_prekey_bundle(
     if authenticated_user != target_user {
         let friends = db::are_friends(&state.db, authenticated_user, target_user)
             .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            .or_500()?;
         if !friends {
             return Err(StatusCode::FORBIDDEN);
         }
     }
 
-    match db::fetch_prekey_bundle(&state.db, target_user).await {
-        Ok(Some(bundle)) => Ok((StatusCode::OK, Json(bundle)).into_response()),
-        Ok(None) => Err(StatusCode::NOT_FOUND),
-        Err(e) => {
-            eprintln!("DB-Error fetching prekey bundle: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
+    let key_bundle = db::fetch_prekey_bundle(&state.db, target_user)
+        .await
+        .or_500()?
+        .ok_or(StatusCode::NOT_FOUND)?;
+    Ok((StatusCode::OK, Json(key_bundle)).into_response())
 }
 
 /// Returns the count of remaining one-time prekeys for the authenticated user so they know when to replenish.
@@ -67,17 +59,15 @@ pub(crate) async fn get_key_count(
     State(state): State<AppState>,
     Extension(authenticated_user): Extension<Uuid>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    match db::count_onetime_prekeys(&state.db, authenticated_user).await {
-        Ok(count) => Ok((
-            StatusCode::OK,
-            Json(KeyCountResponse {
-                remaining_one_time_prekeys: count,
-            }),
-        )
-            .into_response()),
-        Err(e) => {
-            eprintln!("DB-Error counting prekeys: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
+    let count = db::count_onetime_prekeys(&state.db, authenticated_user)
+        .await
+        .or_500()?;
+
+    Ok((
+        StatusCode::OK,
+        Json(KeyCountResponse {
+            remaining_one_time_prekeys: count,
+        }),
+    )
+        .into_response())
 }

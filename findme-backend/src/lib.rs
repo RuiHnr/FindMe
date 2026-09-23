@@ -1,10 +1,13 @@
 pub mod auth;
 pub mod db;
+pub mod error;
 pub mod handlers;
 pub mod models;
+pub mod push_service;
 
 use crate::auth::auth_middleware;
 use axum::middleware::from_fn_with_state;
+use axum::routing::delete;
 use axum::{
     Router,
     routing::{get, post, put},
@@ -14,6 +17,7 @@ use axum::{
 pub struct AppState {
     pub db: sqlx::PgPool,
     pub jwt_secret: String,
+    pub push_service: Option<std::sync::Arc<push_service::PushService>>,
 }
 
 /// Defines all Endpoints and returns the router.
@@ -33,6 +37,9 @@ pub fn build_router(state: AppState) -> Router {
             "/friends/requests/{id}/accept",
             put(handlers::friends::accept_friend),
         )
+        // Presence
+        .route("/presence", post(handlers::presence::heartbeat))
+        .route("/presence", delete(handlers::presence::remove))
         // Keys
         .route("/keys", post(handlers::keys::upload_keys))
         .route("/keys/count", get(handlers::keys::get_key_count))

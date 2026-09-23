@@ -46,3 +46,13 @@ Table onetime_prekeys {
   }
 }
 
+Table active_sessions {
+  user_id uuid [pk, ref: > users.id]
+  last_heartbeat timestampz [not null, default: `now()`]
+}
+
+Table device_tokens {
+  user_id uuid [pk, ref: > users.id]
+  fcm_token varchar
+  apns_token varchar
+}

@@ -1,3 +1,4 @@
+use crate::error::IntoStatusCode;
 use crate::models::{Claims, RegisterRequest, RegisterResponse};
 use crate::{AppState, db};
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
@@ -36,10 +37,7 @@ pub(crate) async fn register_user(
         &claims,
         &EncodingKey::from_secret(state.jwt_secret.as_bytes()),
     )
-    .map_err(|e| {
-        eprintln!("Error encoding token: {}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    .or_500()?;
 
     Ok((StatusCode::OK, Json(RegisterResponse { user_id, token })).into_response())
 }
