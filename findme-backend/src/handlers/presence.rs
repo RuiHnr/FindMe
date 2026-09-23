@@ -26,9 +26,9 @@ pub(crate) async fn heartbeat(
         // Send silent push notification if we have a push_service and a token
         if let (Some(push_service), Some(tokens)) = (&state.push_service, device_token) {
             if let Some(fcm) = tokens.fcm_token {
-                let _ = push_service.send_fcm_wake_up(&fcm).await;
+                let _ = push_service.send_fcm_sync_action(&fcm, &"high").await;
             } else if let Some(apns) = tokens.apns_token {
-                let _ = push_service.send_apns_wake_up(&apns).await;
+                let _ = push_service.send_apns_sync_action(&apns, &"high").await;
             }
         }
     }

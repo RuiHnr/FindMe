@@ -50,7 +50,11 @@ impl PushService {
         })
     }
 
-    pub async fn send_fcm_wake_up(&self, fcm_token: &str) -> Result<(), reqwest::Error> {
+    pub async fn send_fcm_sync_action(
+        &self,
+        fcm_token: &str,
+        mode: &str,
+    ) -> Result<(), reqwest::Error> {
         let url = format!(
             "https://fcm.googleapis.com/v1/projects/{}/messages:send",
             self.fcm_project_id
@@ -59,7 +63,7 @@ impl PushService {
         let payload = json!({
             "message": {
                 "token": fcm_token,
-                "data": { "type": "wake_up" },
+                "data": { "action": "sync", "mode": mode },
                 "android": { "priority": "high" },
                 "apns": {
                     "headers": { "apns-push-type": "background", "apns-priority": "5" },
@@ -78,9 +82,10 @@ impl PushService {
         Ok(())
     }
 
-    pub async fn send_apns_wake_up(
+    pub async fn send_apns_sync_action(
         &self,
         apns_token: &str,
+        mode: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Apple strictly requires Priority::Normal and PushType::Background for silent pushes
         let options = NotificationOptions {
@@ -94,7 +99,8 @@ impl PushService {
             .set_content_available()
             .build(apns_token, options);
         // Add custom payload data
-        payload.add_custom_data("type", &"wake_up")?;
+        payload.add_custom_data("action", &"sync")?;
+        payload.add_custom_data("mode", &mode)?;
 
         self.apns_client.send(payload).await?;
         Ok(())
