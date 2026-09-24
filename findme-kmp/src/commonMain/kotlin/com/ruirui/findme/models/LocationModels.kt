@@ -70,6 +70,12 @@ data class SubmitMessageRequest(
     val encryptedBlob: String
 )
 
+@Serializable
+data class SubmitLocationResponse(
+    val accepted: Int
+)
+
+
 /**
  * Represents the AES-256-GCM encrypted payload and the metadata required to 
  * turn the Double Ratchet (DH ratchet and symmetric ratchet) on the receiver's side.

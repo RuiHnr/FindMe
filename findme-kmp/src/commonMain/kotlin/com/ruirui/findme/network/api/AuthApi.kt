@@ -18,11 +18,9 @@ class AuthApi(private val client: HttpClient) {
      * @param request The username and public key of the new user.
      * @return [Result] containing the generated User ID on success.
      */
-    suspend fun register(request: RegisterRequest): Result<RegisterResponse> {
-        return safeApiCall {
-            client.post("/users/register") {
-                setBody(request)
-            }
+    suspend fun register(request: RegisterRequest): Result<RegisterResponse> = safeApiCall {
+        client.post("/users/register") {
+            setBody(request)
         }
     }
 }

@@ -100,94 +100,23 @@ class LocationRepositoryImpl(
         val friends = db.friendQueries.getAllFriends().executeAsList()
             .map { FriendDto(it.user_id, it.username) }
 
-        coroutineScope {
+        val messages = coroutineScope {
             // Process all friends concurrently
             friends.map { friend ->
                 async {
-                    val envelope: SignalMessageEnvelope
-                    // 1. Load session for this friend
-                    var session = sessionStore.loadSession(friend.userId)
+                    val envelope = encryptForFriend(friend.userId, jsonPayload)
 
-                    if (session == null) {
-                        // Lazy initialization: We have never messaged this friend before.
-
-                        // 1a. Fetch friend's PreKey Bundle
-                        val preKeyBundle = keysApi.getPreKeyBundle(friend.userId).getOrThrow()
-
-                        // 1b. Verify signature
-                        if (!crypto.verify(
-                                Base64.decode(preKeyBundle.identityKeySign),
-                                Base64.decode(preKeyBundle.signedPreKey.publicKey),
-                                Base64.decode(preKeyBundle.signedPreKey.signature)
-                            )
-                        ) {
-                            throw Exception("Invalid signature from ${friend.userId}")
-                        }
-
-                        // 1c. Fetch our own keys
-                        val identityPrivateKeyBase64 =
-                            secureStorage.getString(SecureStorageKeys.IDENTITY_PRIVATE_KEY_DH)
-                                ?: throw Exception("Identity private key not found")
-                        val identityPublicKeyBase64 =
-                            secureStorage.getString(SecureStorageKeys.IDENTITY_PUBLIC_KEY_DH)
-                                ?: throw Exception("Identity public key not found")
-
-                        val baseKey = crypto.generateX25519KeyPair()
-
-                        // 1d. Perform X3DH
-                        val sharedSecret = initX3DH(
-                            crypto = crypto,
-                            aliceIdentityPrivateKey = Base64.decode(identityPrivateKeyBase64),
-                            aliceBasePrivateKey = baseKey.privateKey,
-                            bobIdentityPublicKey = Base64.decode(preKeyBundle.identityKeyDh),
-                            bobSignedPreKeyPublic = Base64.decode(preKeyBundle.signedPreKey.publicKey),
-                            bobOneTimePreKeyPublic = preKeyBundle.oneTimePreKey?.publicKey?.let {
-                                Base64.decode(
-                                    it
-                                )
-                            }
-                        )
-
-                        // 1e. Initialize Session
-                        session = DoubleRatchetSession.initAlice(
-                            sharedSecret = sharedSecret,
-                            bobSignedPreKeyPub = Base64.decode(preKeyBundle.signedPreKey.publicKey),
-                            crypto = crypto
-                        )
-
-                        // 1f. Encrypt the location payload using the NEW session
-                        val encrypted = session.encrypt(jsonPayload.toByteArray())
-
-                        // 1g. Create the PreKeySignalEnvelope
-                        envelope = PreKeySignalEnvelope(
-                            header = MessageHeader(
-                                aliceIdentityKeyDh = identityPublicKeyBase64,
-                                aliceBaseKeyDh = Base64.encode(baseKey.publicKey),
-                                bobSignedPreKeyId = preKeyBundle.signedPreKey.keyId,
-                                bobOneTimePreKeyId = preKeyBundle.oneTimePreKey?.keyId
-                            ),
-                            ciphertext = encrypted
-                        )
-                    } else {
-                        // Session already exists. Encrypt normally.
-                        val encrypted = session.encrypt(jsonPayload.toByteArray())
-                        envelope = NormalSignalEnvelope(encrypted)
-                    }
-
-                    // 2. Save the advanced state (whether new or existing)
-                    sessionStore.saveSession(friend.userId, session)
-
-                    // 3. Send to backend
-                    locationApi.submitMessage(
-                        SubmitMessageRequest(
-                            receiverId = friend.userId,
-                            // Use the sealed class serializer!
-                            encryptedBlob = Json.encodeToString(envelope)
-                        )
-                    ).getOrThrow()
+                    // return the message request
+                    SubmitMessageRequest(
+                        receiverId = friend.userId,
+                        encryptedBlob = Json.encodeToString(envelope)
+                    )
                 }
             }.awaitAll()
         }
+
+        // Send to backend
+        locationApi.submitMessage(messages).getOrThrow()
 
         // Save own location to DB
         db.locationQueries.insertOwnLocation(lat, lng, timestamp)
@@ -198,94 +127,13 @@ class LocationRepositoryImpl(
         val inboxMessages = inboxResponse.messages
 
         inboxMessages.forEach { message ->
-            val senderId = message.senderId
-            val envelope = message.encryptedPayload
-
-            // 1. Load existing session OR initialize a new one if missing
-            val session = sessionStore.loadSession(senderId) ?: when (envelope) {
-                is NormalSignalEnvelope -> throw Exception("Cannot decrypt normal message: No session exists for $senderId")
-
-                is PreKeySignalEnvelope -> {
-                    val header = envelope.header
-
-                    // Fetch our own keys (Bob's perspective)
-                    val bobIdentityPrivateKey =
-                        secureStorage.getString(SecureStorageKeys.IDENTITY_PRIVATE_KEY_DH)
-                            ?.let { Base64.decode(it) }
-                            ?: throw Exception("Identity private key not found")
-
-                    val bobSignedPreKeyPrivate =
-                        secureStorage.getString(SecureStorageKeys.signedPreKeyPrivate(header.bobSignedPreKeyId))
-                            ?.let { Base64.decode(it) }
-                            ?: throw Exception("Signed pre key private not found")
-
-                    val bobSignedPreKeyPublic =
-                        secureStorage.getString(SecureStorageKeys.signedPreKeyPublic(header.bobSignedPreKeyId))
-                            ?.let { Base64.decode(it) }
-                            ?: throw Exception("Signed pre key public not found")
-
-                    val bobOneTimePreKeyPrivate = header.bobOneTimePreKeyId?.let { oneTimeId ->
-                        val key = db.oneTimePreKeyQueries.getPrivateKey(oneTimeId.toLong())
-                            .executeAsOneOrNull()
-                            ?.let { Base64.decode(it) }
-                            ?: throw Exception("One-time pre key with ID $oneTimeId private not found")
-                        // Permanently delete the one-time prekey immediately after use for Perfect Forward Secrecy
-                        db.oneTimePreKeyQueries.deleteKey(oneTimeId.toLong())
-                        key
-                    }
-
-                    // Perform X3DH
-                    val sharedSecret = receiveX3DH(
-                        crypto = crypto,
-                        bobIdentityPrivateKey = bobIdentityPrivateKey,
-                        bobSignedPreKeyPrivate = bobSignedPreKeyPrivate,
-                        bobOneTimePreKeyPrivate = bobOneTimePreKeyPrivate,
-                        aliceIdentityPublicKey = Base64.decode(header.aliceIdentityKeyDh),
-                        aliceBasePublicKey = Base64.decode(header.aliceBaseKeyDh)
-                    )
-
-                    // Check for identity pin mismatch
-                    val existingPin =
-                        db.identityPinQueries.getPin(senderId).executeAsOneOrNull()
-                    if (existingPin != null && existingPin.identity_key_dh != header.aliceIdentityKeyDh) {
-                        // IDENTITY KEY CHANGED! Possible MITM or device reset.
-                        // Signal shows a "Safety Number changed" warning here.
-                        throw Exception("Identity key mismatch for $senderId! Expected ${existingPin.identity_key_dh}")
-                    }
-                    // Save the new pin
-                    db.identityPinQueries.upsertPin(
-                        user_id = senderId,
-                        identity_key_dh = header.aliceIdentityKeyDh,
-                        first_seen_at = existingPin?.first_seen_at ?: getTimeMillis(),
-                        last_verified_at = getTimeMillis()
-                    )
-
-                    // Initialize and return the session
-                    DoubleRatchetSession.initBob(
-                        sharedSecret = sharedSecret,
-                        bobRatchetKeyPair = KeyPair(
-                            bobSignedPreKeyPublic,
-                            bobSignedPreKeyPrivate
-                        ),
-                        crypto = crypto
-                    )
-                }
-            }
-
-            // 2. Decrypt message using Ratchet
-            val encrypted = envelope.ciphertext
-
-            val decryptedBytes = session.decrypt(encrypted)
-            val jsonString = decryptedBytes.decodeToString()
-
-            // 3. Save the advanced state
-            sessionStore.saveSession(senderId, session)
+            val jsonString = decryptFromFriend(message.senderId, message.encryptedPayload)
 
             // 4. Parse coordinates, save to DB (which updates UI)
             val location: LocationPayload = Json.decodeFromString(jsonString)
 
             db.locationQueries.insertLocationForFriend(
-                friend_user_id = senderId,
+                friend_user_id = message.senderId,
                 lat = location.lat,
                 lng = location.lng,
                 timestamp = location.timestamp,
@@ -310,5 +158,165 @@ class LocationRepositoryImpl(
         db.locationQueries.getLocationHistoryForFriend(friendId, limit)
             .executeAsList()
             .map { LocationPayload(it.lat, it.lng, it.timestamp) }
+    }
+
+    private suspend fun encryptForFriend(friendId: String, payload: String): SignalMessageEnvelope {
+        val envelope: SignalMessageEnvelope
+        // 1. Load session for this friend
+        var session = sessionStore.loadSession(friendId)
+
+        if (session == null) {
+            // Lazy initialization: We have never messaged this friend before.
+
+            // 1a. Fetch friend's PreKey Bundle
+            val preKeyBundle = keysApi.getPreKeyBundle(friendId).getOrThrow()
+
+            // 1b. Verify signature
+            if (!crypto.verify(
+                    Base64.decode(preKeyBundle.identityKeySign),
+                    Base64.decode(preKeyBundle.signedPreKey.publicKey),
+                    Base64.decode(preKeyBundle.signedPreKey.signature)
+                )
+            ) {
+                throw Exception("Invalid signature from $friendId")
+            }
+
+            // 1c. Fetch our own keys
+            val identityPrivateKeyBase64 =
+                secureStorage.getString(SecureStorageKeys.IDENTITY_PRIVATE_KEY_DH)
+                    ?: throw Exception("Identity private key not found")
+            val identityPublicKeyBase64 =
+                secureStorage.getString(SecureStorageKeys.IDENTITY_PUBLIC_KEY_DH)
+                    ?: throw Exception("Identity public key not found")
+
+            val baseKey = crypto.generateX25519KeyPair()
+
+            // 1d. Perform X3DH
+            val sharedSecret = initX3DH(
+                crypto = crypto,
+                aliceIdentityPrivateKey = Base64.decode(identityPrivateKeyBase64),
+                aliceBasePrivateKey = baseKey.privateKey,
+                bobIdentityPublicKey = Base64.decode(preKeyBundle.identityKeyDh),
+                bobSignedPreKeyPublic = Base64.decode(preKeyBundle.signedPreKey.publicKey),
+                bobOneTimePreKeyPublic = preKeyBundle.oneTimePreKey?.publicKey?.let {
+                    Base64.decode(
+                        it
+                    )
+                }
+            )
+
+            // 1e. Initialize Session
+            session = DoubleRatchetSession.initAlice(
+                sharedSecret = sharedSecret,
+                bobSignedPreKeyPub = Base64.decode(preKeyBundle.signedPreKey.publicKey),
+                crypto = crypto
+            )
+
+            // 1f. Encrypt the location payload using the NEW session
+            val encrypted = session.encrypt(payload.toByteArray())
+
+            // 1g. Create the PreKeySignalEnvelope
+            envelope = PreKeySignalEnvelope(
+                header = MessageHeader(
+                    aliceIdentityKeyDh = identityPublicKeyBase64,
+                    aliceBaseKeyDh = Base64.encode(baseKey.publicKey),
+                    bobSignedPreKeyId = preKeyBundle.signedPreKey.keyId,
+                    bobOneTimePreKeyId = preKeyBundle.oneTimePreKey?.keyId
+                ),
+                ciphertext = encrypted
+            )
+        } else {
+            // Session already exists. Encrypt normally.
+            val encrypted = session.encrypt(payload.toByteArray())
+            envelope = NormalSignalEnvelope(encrypted)
+        }
+
+        // 2. Save the advanced state (whether new or existing)
+        sessionStore.saveSession(friendId, session)
+        return envelope
+    }
+
+    private suspend fun decryptFromFriend(friendId: String, envelope: SignalMessageEnvelope): String {
+        // 1. Load existing session OR initialize a new one if missing
+        val session = sessionStore.loadSession(friendId) ?: when (envelope) {
+            is NormalSignalEnvelope -> throw Exception("Cannot decrypt normal message: No session exists for $friendId")
+
+            is PreKeySignalEnvelope -> {
+                val header = envelope.header
+
+                // Fetch our own keys (Bob's perspective)
+                val bobIdentityPrivateKey =
+                    secureStorage.getString(SecureStorageKeys.IDENTITY_PRIVATE_KEY_DH)
+                        ?.let { Base64.decode(it) }
+                        ?: throw Exception("Identity private key not found")
+
+                val bobSignedPreKeyPrivate =
+                    secureStorage.getString(SecureStorageKeys.signedPreKeyPrivate(header.bobSignedPreKeyId))
+                        ?.let { Base64.decode(it) }
+                        ?: throw Exception("Signed pre key private not found")
+
+                val bobSignedPreKeyPublic =
+                    secureStorage.getString(SecureStorageKeys.signedPreKeyPublic(header.bobSignedPreKeyId))
+                        ?.let { Base64.decode(it) }
+                        ?: throw Exception("Signed pre key public not found")
+
+                val bobOneTimePreKeyPrivate = header.bobOneTimePreKeyId?.let { oneTimeId ->
+                    val key = db.oneTimePreKeyQueries.getPrivateKey(oneTimeId.toLong())
+                        .executeAsOneOrNull()
+                        ?.let { Base64.decode(it) }
+                        ?: throw Exception("One-time pre key with ID $oneTimeId private not found")
+                    // Permanently delete the one-time prekey immediately after use for Perfect Forward Secrecy
+                    db.oneTimePreKeyQueries.deleteKey(oneTimeId.toLong())
+                    key
+                }
+
+                // Perform X3DH
+                val sharedSecret = receiveX3DH(
+                    crypto = crypto,
+                    bobIdentityPrivateKey = bobIdentityPrivateKey,
+                    bobSignedPreKeyPrivate = bobSignedPreKeyPrivate,
+                    bobOneTimePreKeyPrivate = bobOneTimePreKeyPrivate,
+                    aliceIdentityPublicKey = Base64.decode(header.aliceIdentityKeyDh),
+                    aliceBasePublicKey = Base64.decode(header.aliceBaseKeyDh)
+                )
+
+                // Check for identity pin mismatch
+                val existingPin =
+                    db.identityPinQueries.getPin(friendId).executeAsOneOrNull()
+                if (existingPin != null && existingPin.identity_key_dh != header.aliceIdentityKeyDh) {
+                    // IDENTITY KEY CHANGED! Possible MITM or device reset.
+                    // Signal shows a "Safety Number changed" warning here.
+                    throw Exception("Identity key mismatch for $friendId! Expected ${existingPin.identity_key_dh}")
+                }
+                // Save the new pin
+                db.identityPinQueries.upsertPin(
+                    user_id = friendId,
+                    identity_key_dh = header.aliceIdentityKeyDh,
+                    first_seen_at = existingPin?.first_seen_at ?: getTimeMillis(),
+                    last_verified_at = getTimeMillis()
+                )
+
+                // Initialize and return the session
+                DoubleRatchetSession.initBob(
+                    sharedSecret = sharedSecret,
+                    bobRatchetKeyPair = KeyPair(
+                        bobSignedPreKeyPublic,
+                        bobSignedPreKeyPrivate
+                    ),
+                    crypto = crypto
+                )
+            }
+        }
+
+        // 2. Decrypt message using Ratchet
+        val encrypted = envelope.ciphertext
+
+        val decryptedBytes = session.decrypt(encrypted)
+        val jsonString = decryptedBytes.decodeToString()
+
+        // 3. Save the advanced state
+        sessionStore.saveSession(friendId, session)
+
+        return jsonString;
     }
 }
