@@ -10,12 +10,12 @@ with adaptive update frequency based on watcher presence.
 Currently, **all** data synchronization is pull-only and manual. The client must be in the
 foreground and explicitly call `syncInbox()` / `syncFriends()` to fetch new data. This means:
 
-| Problem                                  | Impact                                                                                                           |
-|------------------------------------------|------------------------------------------------------------------------------------------------------------------|
-| **No real-time updates**                 | Bob opens the map but can't see Alice moving — he only gets her location when she also opens the app.            |
-| **No background sending**               | Alice closes the app and stops sharing entirely. Her location goes stale.                                        |
-| **No adaptive frequency**               | There's no mechanism to send high-frequency updates only when needed, leading to either stale data or wasted battery. |
-| **Inbox messages queue up on server**    | The backend's `location_inbox` table grows unboundedly until the receiver opens the app.                         |
+| Problem                               | Impact                                                                                                                |
+|---------------------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| **No real-time updates**              | Bob opens the map but can't see Alice moving — he only gets her location when she also opens the app.                 |
+| **No background sending**             | Alice closes the app and stops sharing entirely. Her location goes stale.                                             |
+| **No adaptive frequency**             | There's no mechanism to send high-frequency updates only when needed, leading to either stale data or wasted battery. |
+| **Inbox messages queue up on server** | The backend's `location_inbox` table grows unboundedly until the receiver opens the app.                              |
 
 ---
 
@@ -25,12 +25,12 @@ foreground and explicitly call `syncInbox()` / `syncFriends()` to fetch new data
 
 Alice's device operates in one of two modes based on whether any friend is actively viewing:
 
-| | Nobody watching (LOW mode) | Someone watching (HIGH mode) |
-|---|---|---|
-| **GPS** | Off. Significant-change service only. | Active. Android: 5-second interval. iOS: 5-meter distance filter (fires every ~3–5s when moving). |
-| **Network** | Submit only on significant movement. | Submit on every GPS callback (batched, skip if stationary). |
-| **Battery** | ~0.5%/hour | ~5–8%/hour |
-| **What Bob sees** | "Last updated 7 min ago" | Real-time dot moving on map |
+|                   | Nobody watching (LOW mode)            | Someone watching (HIGH mode)                                                                      |
+|-------------------|---------------------------------------|---------------------------------------------------------------------------------------------------|
+| **GPS**           | Off. Significant-change service only. | Active. Android: 5-second interval. iOS: 5-meter distance filter (fires every ~3–5s when moving). |
+| **Network**       | Submit only on significant movement.  | Submit on every GPS callback (batched, skip if stationary).                                       |
+| **Battery**       | ~0.5%/hour                            | ~5–8%/hour                                                                                        |
+| **What Bob sees** | "Last updated 7 min ago"              | Real-time dot moving on map                                                                       |
 
 ### How It Works
 
@@ -56,13 +56,21 @@ Bob closes app
 
 ### Key Design Decisions
 
-1. **Push on Presence (Wake-Up):** The major flaw with polling is that if Alice is stationary in LOW mode, she never sends a location, meaning she never gets the watcher count back to know Bob is watching! Instead, we use silent push notifications (FCM/APNs) triggered by `POST /presence`. When Bob opens the map, Alice is instantly woken up and switches to HIGH mode.
+1. **Push on Presence (Wake-Up):** The major flaw with polling is that if Alice is stationary in LOW
+   mode, she never sends a location, meaning she never gets the watcher count back to know Bob is
+   watching! Instead, we use silent push notifications (FCM/APNs) triggered by `POST /presence`.
+   When Bob opens the map, Alice is instantly woken up and switches to HIGH mode.
 
-2. **No push for every location.** Push notifications are ONLY used to wake the app up when a friend starts watching. We do NOT send a push notification for every single location update. That would overwhelm the system and battery. Once Alice is in HIGH mode, she submits to `/inbox` and Bob polls `/inbox`.
+2. **No push for every location.** Push notifications are ONLY used to wake the app up when a friend
+   starts watching. We do NOT send a push notification for every single location update. That would
+   overwhelm the system and battery. Once Alice is in HIGH mode, she submits to `/inbox` and Bob
+   polls `/inbox`.
 
-3. **Batch inbox submission.** `POST /inbox` accepts an array of messages. Alice encrypts for all friends and sends one HTTP request instead of N separate ones, reducing radio wake-ups.
+3. **Batch inbox submission.** `POST /inbox` accepts an array of messages. Alice encrypts for all
+   friends and sends one HTTP request instead of N separate ones, reducing radio wake-ups.
 
-4. **Displacement filter.** If Alice hasn't moved more than 5 meters since the last update, skip the submission entirely. Eliminates hundreds of redundant updates per hour when stationary.
+4. **Displacement filter.** If Alice hasn't moved more than 5 meters since the last update, skip the
+   submission entirely. Eliminates hundreds of redundant updates per hour when stationary.
 
 ---
 
@@ -196,7 +204,9 @@ pub(crate) async fn remove(
 
 ### 3.5 Sending Silent Pushes (`src/push.rs`)
 
-To wake up the receiver's app in the background, we must send a **silent data notification**. If you include a UI payload (like `title` or `body`), the OS displays it and defeats the purpose of a silent wake-up.
+To wake up the receiver's app in the background, we must send a **silent data notification**. If you
+include a UI payload (like `title` or `body`), the OS displays it and defeats the purpose of a
+silent wake-up.
 
 #### FCM (Android & iOS via Firebase)
 
@@ -237,6 +247,7 @@ pub async fn send_fcm_silent_push(fcm_token: &str) {
 #### APNs (iOS natively without Firebase)
 
 If you send directly to Apple, you must strictly follow their background push rules:
+
 1. Header `apns-push-type: background`
 2. Header `apns-priority: 5` (Priority 10 for background pushes will get you throttled).
 3. Payload `content-available: 1`.
@@ -573,7 +584,8 @@ firebase-messaging = { module = "com.google.firebase:firebase-messaging", versio
 
 ### 5.2 Push Receiver (`FindMeMessagingService`)
 
-Create a service extending `FirebaseMessagingService` to catch the silent push and wake the location service.
+Create a service extending `FirebaseMessagingService` to catch the silent push and wake the location
+service.
 
 ```kotlin
 package com.ruirui.findme.location
@@ -583,12 +595,12 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 
 class FindMeMessagingService : FirebaseMessagingService() {
-    
+
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         // TODO: Send token to backend via DeviceApi
     }
-    
+
     override fun onMessageReceived(message: RemoteMessage) {
         // If it's a silent wake-up push from a friend
         if (message.data["type"] == "wake_up") {
@@ -604,7 +616,8 @@ class FindMeMessagingService : FirebaseMessagingService() {
 
 ### 5.3 `LocationSharingService` (Foreground Service)
 
-Create in the Android app module: `app/src/main/java/com/ruirui/findme/location/LocationSharingService.kt`
+Create in the Android app module:
+`app/src/main/java/com/ruirui/findme/location/LocationSharingService.kt`
 
 ```kotlin
 package com.ruirui.findme.location
@@ -669,16 +682,20 @@ class LocationSharingService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val forcedMode = intent?.getStringExtra("force_mode")
         val targetMode = if (forcedMode == "HIGH") Mode.HIGH else Mode.LOW
-        
+
         if (targetMode != currentMode || locationCallback == null) {
             startLocationUpdates(targetMode)
         }
-        
+
         return START_STICKY
     }
 
     private fun startForegroundNotification() {
-        val channel = NotificationChannel(CHANNEL_ID, "FindMe Location Sharing", NotificationManager.IMPORTANCE_LOW)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "FindMe Location Sharing",
+            NotificationManager.IMPORTANCE_LOW
+        )
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
@@ -804,25 +821,21 @@ class InboxSyncWorker(
 
 ```xml
 <!-- Permissions -->
-<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-<uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
-<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" /><uses-permission
+android:name="android.permission.ACCESS_FINE_LOCATION" /><uses-permission
+android:name="android.permission.ACCESS_BACKGROUND_LOCATION" /><uses-permission
+android:name="android.permission.FOREGROUND_SERVICE" /><uses-permission
+android:name="android.permission.FOREGROUND_SERVICE_LOCATION" /><uses-permission
+android:name="android.permission.POST_NOTIFICATIONS" />
 
-<!-- Inside <application> -->
-<service
-    android:name=".location.LocationSharingService"
-    android:exported="false"
-    android:foregroundServiceType="location" />
+    <!-- Inside <application> -->
+<service android:name=".location.LocationSharingService" android:exported="false"
+android:foregroundServiceType="location" />
 
-<service
-    android:name=".location.FindMeMessagingService"
-    android:exported="true">
-    <intent-filter>
-        <action android:name="com.google.firebase.MESSAGING_EVENT" />
-    </intent-filter>
+<service android:name=".location.FindMeMessagingService" android:exported="true">
+<intent-filter>
+    <action android:name="com.google.firebase.MESSAGING_EVENT" />
+</intent-filter>
 </service>
 ```
 
@@ -835,22 +848,22 @@ class InboxSyncWorker(
 In your iOS app's `Info.plist`:
 
 ```xml
-<key>UIBackgroundModes</key>
-<array>
-    <string>location</string>           <!-- Continuous background location -->
-    <string>fetch</string>              <!-- Background fetch (BGTaskScheduler) -->
-    <string>remote-notification</string> <!-- Silent Push wake ups -->
+
+<key>UIBackgroundModes</key><array>
+<string>location</string>           <!-- Continuous background location -->
+<string>fetch</string>              <!-- Background fetch (BGTaskScheduler) -->
+<string>remote-notification</string> <!-- Silent Push wake ups -->
 </array>
 
-<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-<string>FindMe shares your location with friends you've added.</string>
+<key>NSLocationAlwaysAndWhenInUseUsageDescription</key><string>FindMe shares your location with
+friends you've added.
+</string>
 
-<key>NSLocationWhenInUseUsageDescription</key>
-<string>FindMe shows your location on the map.</string>
+<key>NSLocationWhenInUseUsageDescription</key><string>FindMe shows your location on the map.
+</string>
 
-<key>BGTaskSchedulerPermittedIdentifiers</key>
-<array>
-    <string>com.ruirui.findme.inbox-sync</string>
+<key>BGTaskSchedulerPermittedIdentifiers</key><array>
+<string>com.ruirui.findme.inbox-sync</string>
 </array>
 ```
 
@@ -1088,21 +1101,21 @@ Backend:
 - [x] 1. Create `active_sessions` table in `src/db/presence.rs`
 - [x] 2. Create `device_tokens` table & registration endpoint
 - [x] 3. Integrate FCM / APNs Rust SDK (e.g. `fcm` crate)
-- [ ] 4. Update `POST /presence` to trigger silent pushes
+- [x] 4. Update `POST /presence` to trigger silent pushes
 - [x] 5. Ensure `POST /inbox` returns `accepted` count (no watchers)
 
 KMP Shared (findme-kmp):
 - [x] 6. Update `LocationApi.submitMessages()` to accept List
 - [ ] 7. Add `DeviceApi` to register push tokens
-- [ ] 8. Create `SyncOrchestrator` in `commonMain/sync/`
-- [ ] 9. Create `PresenceManager` in `commonMain/sync/`
+- [x] 8. Create `SyncOrchestrator` in `commonMain/sync/`
+- [x] 9. Create `PresenceManager` in `commonMain/sync/`
 - [ ] 10. Add unit tests: SyncOrchestratorTest, PresenceManagerTest
 - [ ] 11. Update FakeBackend to handle batch /inbox endpoints
 
 Android:
-- [ ] 12. Add WorkManager & Firebase Cloud Messaging dependencies
-- [ ] 13. Implement `FindMeMessagingService` for silent pushes
-- [ ] 14. Create `LocationSharingService` with adaptive HIGH/LOW modes
+- [x] 12. Add WorkManager & Firebase Cloud Messaging dependencies
+- [x] 13. Implement `FindMeMessagingService` for silent pushes
+- [x] 14. Create `LocationSharingService` with adaptive HIGH/LOW modes
 - [ ] 15. Create `InboxSyncWorker` (periodic fallback)
 - [ ] 16. Register service + permissions in AndroidManifest.xml
 - [ ] 17. Add foreground polling in map ViewModel
@@ -1152,66 +1165,88 @@ class SyncOrchestratorTest {
 
 ### Manual Verification
 
-| Step | What to verify                                                                           |
-|------|------------------------------------------------------------------------------------------|
-| 1    | Alice starts sharing → foreground service runs in LOW mode (infrequent updates)          |
-| 2    | Bob opens the map → presence heartbeat starts → backend fires push to Alice              |
-| 3    | Alice's phone receives push → switches to HIGH mode within a few seconds                 |
+| Step | What to verify                                                                                   |
+|------|--------------------------------------------------------------------------------------------------|
+| 1    | Alice starts sharing → foreground service runs in LOW mode (infrequent updates)                  |
+| 2    | Bob opens the map → presence heartbeat starts → backend fires push to Alice                      |
+| 3    | Alice's phone receives push → switches to HIGH mode within a few seconds                         |
 | 4    | Bob sees Alice's location updating in near-real-time on the map (every few seconds while moving) |
-| 5    | Bob closes the app → presence expires → Alice switches back to LOW mode                  |
-| 6    | Alice is stationary → displacement filter skips submissions → minimal battery drain      |
-| 7    | Both apps killed → WorkManager/BGTaskScheduler syncs inbox every ~15 min                 |
+| 5    | Bob closes the app → presence expires → Alice switches back to LOW mode                          |
+| 6    | Alice is stationary → displacement filter skips submissions → minimal battery drain              |
+| 7    | Both apps killed → WorkManager/BGTaskScheduler syncs inbox every ~15 min                         |
 
 ---
 
 ## 11. File Summary
 
-| Action       | File Path                                                                            |
-|--------------|--------------------------------------------------------------------------------------|
-| **[NEW]**    | `findme-backend/src/db/presence.rs` — Active sessions CRUD                           |
-| **[NEW]**    | `findme-backend/src/db/device_tokens.rs` — Device token CRUD (FCM/APNs)              |
-| **[NEW]**    | `findme-backend/src/handlers/presence.rs` — Heartbeat (triggers push)              |
+| Action       | File Path                                                                                 |
+|--------------|-------------------------------------------------------------------------------------------|
+| **[NEW]**    | `findme-backend/src/db/presence.rs` — Active sessions CRUD                                |
+| **[NEW]**    | `findme-backend/src/db/device_tokens.rs` — Device token CRUD (FCM/APNs)                   |
+| **[NEW]**    | `findme-backend/src/handlers/presence.rs` — Heartbeat (triggers push)                     |
 | **[MODIFY]** | `findme-backend/src/handlers/location.rs` — Accept array, return `SubmitLocationResponse` |
-| **[NEW]**    | `findme-kmp/.../sync/SyncOrchestrator.kt` — Mutex-protected sync coordinator         |
-| **[NEW]**    | `findme-kmp/.../sync/PresenceManager.kt` — Heartbeat lifecycle manager               |
-| **[NEW]**    | `findme-kmp/.../network/api/PresenceApi.kt` — `/presence` HTTP client                |
-| **[MODIFY]** | `findme-kmp/.../network/api/LocationApi.kt` — `submitMessages(List)`               |
-| **[NEW]**    | Android `FindMeMessagingService.kt` — Silent push receiver                           |
-| **[NEW]**    | Android `LocationSharingService.kt` — Adaptive foreground service                    |
-| **[NEW]**    | Android `InboxSyncWorker.kt` — WorkManager periodic fallback                         |
-| **[MODIFY]** | Android `AndroidManifest.xml` — Register services + permissions                      |
-| **[NEW]**    | iOS `LocationSharingManager.swift` — Adaptive CLLocationManager                      |
-| **[MODIFY]** | iOS `AppDelegate.swift` — Handle silent pushes                                       |
-| **[MODIFY]** | iOS `Info.plist` — Background location + fetch + push modes                          |
+| **[NEW]**    | `findme-kmp/.../sync/SyncOrchestrator.kt` — Mutex-protected sync coordinator              |
+| **[NEW]**    | `findme-kmp/.../sync/PresenceManager.kt` — Heartbeat lifecycle manager                    |
+| **[NEW]**    | `findme-kmp/.../network/api/PresenceApi.kt` — `/presence` HTTP client                     |
+| **[MODIFY]** | `findme-kmp/.../network/api/LocationApi.kt` — `submitMessages(List)`                      |
+| **[NEW]**    | Android `FindMeMessagingService.kt` — Silent push receiver                                |
+| **[NEW]**    | Android `LocationSharingService.kt` — Adaptive foreground service                         |
+| **[NEW]**    | Android `InboxSyncWorker.kt` — WorkManager periodic fallback                              |
+| **[MODIFY]** | Android `AndroidManifest.xml` — Register services + permissions                           |
+| **[NEW]**    | iOS `LocationSharingManager.swift` — Adaptive CLLocationManager                           |
+| **[MODIFY]** | iOS `AppDelegate.swift` — Handle silent pushes                                            |
+| **[MODIFY]** | iOS `Info.plist` — Background location + fetch + push modes                               |
 
 ---
 
 ## 12. Gotchas & Tips
 
-1. **Presence auto-expiry is critical.** If Bob's app crashes without calling `DELETE /presence`, Alice would stay in HIGH mode forever. The backend must expire Bob's presence automatically if he hasn't heartbeated in 60s.
+1. **Presence auto-expiry is critical.** If Bob's app crashes without calling `DELETE /presence`,
+   Alice would stay in HIGH mode forever. The backend must expire Bob's presence automatically if he
+   hasn't heartbeated in 60s.
 
-2. **Don't block `submitLocalLocation` on `syncInboxOnly`.** The piggyback sync is a best-effort optimization. If it fails (e.g., network error), the location submission should still succeed.
+2. **Don't block `submitLocalLocation` on `syncInboxOnly`.** The piggyback sync is a best-effort
+   optimization. If it fails (e.g., network error), the location submission should still succeed.
 
-3. **Android `PRIORITY_HIGH_ACCURACY` vs `PRIORITY_BALANCED_POWER_ACCURACY`.** The former activates the GPS hardware. The latter uses cell towers and WiFi — no GPS radio, dramatically less battery. LOW mode should use balanced accuracy; HIGH mode should use high accuracy.
+3. **Android `PRIORITY_HIGH_ACCURACY` vs `PRIORITY_BALANCED_POWER_ACCURACY`.** The former activates
+   the GPS hardware. The latter uses cell towers and WiFi — no GPS radio, dramatically less battery.
+   LOW mode should use balanced accuracy; HIGH mode should use high accuracy.
 
-4. **iOS significant-change service survives app kill.** Unlike standard location updates, `startMonitoringSignificantLocationChanges()` will **relaunch** your app from a killed state when a significant location change occurs.
+4. **iOS significant-change service survives app kill.** Unlike standard location updates,
+   `startMonitoringSignificantLocationChanges()` will **relaunch** your app from a killed state when
+   a significant location change occurs.
 
-5. **Displacement filter threshold.** 5 meters is a good starting point. For driving, you might want to increase it to 10–20m to avoid noisy GPS jitter at traffic lights.
+5. **Displacement filter threshold.** 5 meters is a good starting point. For driving, you might want
+   to increase it to 10–20m to avoid noisy GPS jitter at traffic lights.
 
-6. **Batch `POST /inbox` is a breaking change.** The handler expects `Vec<SubmitLocationRequest>`. Update the `FakeBackend` in `commonTest` accordingly.
+6. **Batch `POST /inbox` is a breaking change.** The handler expects `Vec<SubmitLocationRequest>`.
+   Update the `FakeBackend` in `commonTest` accordingly.
 
-7. **WorkManager 15-minute minimum.** Android enforces a minimum periodic interval of 15 minutes for `PeriodicWorkRequest`. You cannot make it shorter.
+7. **WorkManager 15-minute minimum.** Android enforces a minimum periodic interval of 15 minutes for
+   `PeriodicWorkRequest`. You cannot make it shorter.
 
-8. **iOS background fetch budget.** iOS gives each app a limited number of background fetch opportunities per day, prioritized by how often the user opens the app.
+8. **iOS background fetch budget.** iOS gives each app a limited number of background fetch
+   opportunities per day, prioritized by how often the user opens the app.
 
-9. **The Mutex protects ratchet state, not GPS state.** The `SyncOrchestrator.syncMutex` prevents concurrent decryption runs.
+9. **The Mutex protects ratchet state, not GPS state.** The `SyncOrchestrator.syncMutex` prevents
+   concurrent decryption runs.
 
-10. **Don't heartbeat when the foreground service isn't running.** Only start `PresenceManager` when the map screen is actually visible and the user expects to see friends' locations.
+10. **Don't heartbeat when the foreground service isn't running.** Only start `PresenceManager` when
+    the map screen is actually visible and the user expects to see friends' locations.
 
-11. **Android OEM battery management can kill foreground services.** Samsung, Xiaomi, Huawei, and OnePlus devices have custom battery optimization that can kill foreground services. Consider showing a one-time prompt linking to [dontkillmyapp.com](https://dontkillmyapp.com/).
+11. **Android OEM battery management can kill foreground services.** Samsung, Xiaomi, Huawei, and
+    OnePlus devices have custom battery optimization that can kill foreground services. Consider
+    showing a one-time prompt linking to [dontkillmyapp.com](https://dontkillmyapp.com/).
 
-12. **iOS App Store review requires justification for background location.** Your App Store description must clearly state that FindMe is a location-sharing app and uses location in the background.
+12. **iOS App Store review requires justification for background location.** Your App Store
+    description must clearly state that FindMe is a location-sharing app and uses location in the
+    background.
 
-13. **iOS uses distance-based triggers, not time-based intervals.** Unlike Android's `FusedLocationProviderClient`, iOS's `CLLocationManager` fires based on `distanceFilter`. With `distanceFilter = 5`, updates fire every ~3–5s while walking, faster while driving, and not at all while stationary.
+13. **iOS uses distance-based triggers, not time-based intervals.** Unlike Android's
+    `FusedLocationProviderClient`, iOS's `CLLocationManager` fires based on `distanceFilter`. With
+    `distanceFilter = 5`, updates fire every ~3–5s while walking, faster while driving, and not at
+    all while stationary.
 
-14. **Push notifications are not guaranteed.** FCM and APNs may throttle silent background pushes if the user rarely opens your app. This is why the `15-minute` fallback worker in Android/iOS is critical!
+14. **Push notifications are not guaranteed.** FCM and APNs may throttle silent background pushes if
+    the user rarely opens your app. This is why the `15-minute` fallback worker in Android/iOS is
+    critical!

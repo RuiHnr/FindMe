@@ -54,6 +54,7 @@ kotlin {
             implementation("androidx.datastore:datastore-preferences:1.2.1")
             implementation(libs.firebase.messaging)
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.play.services.location)
             implementation(libs.sqldelight.android.driver)
         }
         iosMain.dependencies {
