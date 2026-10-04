@@ -52,6 +52,7 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.androidx.security.crypto)
             implementation("androidx.datastore:datastore-preferences:1.2.1")
+            implementation(libs.androidx.work.runtime.ktx)
             implementation(libs.firebase.messaging)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.play.services.location)

@@ -123,8 +123,8 @@ class FakeBackend {
                         it.toString()
                     }
                 }
-                val body = Json.decodeFromString<SubmitMessageRequest>(bodyText)
-                locationBackend.submitMessage(dynamicUserId, body)
+                val bodies = Json.decodeFromString<List<SubmitMessageRequest>>(bodyText)
+                bodies.forEach { body -> locationBackend.submitMessage(dynamicUserId, body) }
                 respond("", HttpStatusCode.OK)
             }
 

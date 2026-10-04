@@ -81,8 +81,10 @@ class NetworkApiTest {
         val locationApi = LocationApi(client)
 
         // Test Submit
+        val request = listOf(SubmitMessageRequest("friend-123", "secretData"))
         val submitResult =
-            locationApi.submitMessage(SubmitMessageRequest("friend-123", "secretData"))
+            locationApi.submitMessage(request)
+
         assertTrue(submitResult.isSuccess, "submitMessage failed: ${submitResult.exceptionOrNull()?.message}")
         assertEquals(Unit, submitResult.getOrNull())
 

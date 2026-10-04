@@ -1116,7 +1116,7 @@ Android:
 - [x] 12. Add WorkManager & Firebase Cloud Messaging dependencies
 - [x] 13. Implement `FindMeMessagingService` for silent pushes
 - [x] 14. Create `LocationSharingService` with adaptive HIGH/LOW modes
-- [ ] 15. Create `InboxSyncWorker` (periodic fallback)
+- [x] 15. Create `InboxSyncWorker` (periodic fallback)
 - [ ] 16. Register service + permissions in AndroidManifest.xml
 - [ ] 17. Add foreground polling in map ViewModel
 - [ ] 18. Hook into auth lifecycle (start on login, stop on logout)

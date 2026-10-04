@@ -26,7 +26,7 @@ class PresenceManager(
     companion object {
         private const val HEARTBEAT_INTERVAL_MS = 30_000L
     }
-    private var heartbeatJob: Job? = null
+    internal var heartbeatJob: Job? = null
 
     fun start() {
         if (heartbeatJob?.isActive == true) return

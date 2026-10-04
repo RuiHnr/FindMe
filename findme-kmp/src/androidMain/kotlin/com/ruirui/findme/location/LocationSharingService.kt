@@ -1,5 +1,6 @@
 package com.ruirui.findme.location
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
@@ -8,6 +9,7 @@ import android.location.Location
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
+import androidx.annotation.RequiresPermission
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
@@ -15,6 +17,7 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.ruirui.findme.app.FindMeApp
 import com.ruirui.findme.repository.LocationRepository
 import com.ruirui.findme.sync.SyncOrchestrator
 import kotlinx.coroutines.CoroutineScope
@@ -57,13 +60,16 @@ class LocationSharingService : Service() {
         startForegroundNotification()
     }
 
+    @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val forcedMode = intent?.getStringExtra("mode")
         val targetMode = if (forcedMode == "HIGH") Mode.HIGH else Mode.LOW
 
         if (targetMode != currentMode || locationCallback == null) {
-            TODO("startLocationUpdates()")
+            startLocationUpdates(targetMode);
         }
+
+        return START_STICKY
     }
 
     private fun startForegroundNotification() {
@@ -80,6 +86,7 @@ class LocationSharingService : Service() {
         startForeground(NOTIFICATION_ID, notification)
     }
 
+    @RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     private fun startLocationUpdates(mode: Mode) {
         locationCallback?.let { fusedLocationClient.removeLocationUpdates { it } }
 
@@ -113,8 +120,8 @@ class LocationSharingService : Service() {
         }
         lastSentLocation = location
 
-        val repo: LocationRepository
-        val orchestrator: SyncOrchestrator
+        val repo: LocationRepository = FindMeApp.instance.locationRepository
+        val orchestrator: SyncOrchestrator = FindMeApp.instance.syncOrchestrator
 
         serviceScope.launch {
             repo.submitLocalLocation(location.latitude, location.longitude)

@@ -5,13 +5,18 @@ import io.ktor.client.HttpClient
 import io.ktor.client.request.delete
 import io.ktor.client.request.post
 
-class PresenceApi(private val client: HttpClient) {
+interface PresenceApi {
+    suspend fun heartbeat(): Result<Unit>
+    suspend fun remove(): Result<Unit>
+}
 
-    suspend fun heartbeat(): Result<Unit> = safeApiCall {
+class HttpPresenceApi(private val client: HttpClient) : PresenceApi {
+
+    override suspend fun heartbeat(): Result<Unit> = safeApiCall {
         client.post("/presence")
     }
 
-    suspend fun remove(): Result<Unit> = safeApiCall {
+    override suspend fun remove(): Result<Unit> = safeApiCall {
         client.delete("/presence")
     }
 }
