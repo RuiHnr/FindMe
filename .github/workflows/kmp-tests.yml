@@ -38,7 +38,9 @@ jobs:
           restore-keys: gradle-${{ runner.os }}-
 
       - name: Run KMP tests
-        run: ./gradlew :findme-kmp:testAndroidHostTest --no-daemon
+        run: |
+          chmod +x gradlew
+          ./gradlew :findme-kmp:testAndroidHostTest --no-daemon
 
       - name: Upload test results
         if: always()
