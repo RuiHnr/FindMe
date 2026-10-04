@@ -1,0 +1,47 @@
+CREATE TABLE own_location_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    lat REAL NOT NULL,
+    lng REAL NOT NULL,
+    timestamp INTEGER NOT NULL
+);
+
+CREATE TABLE friends_location_history (
+    friend_user_id TEXT NOT NULL,
+    lat REAL NOT NULL,
+    lng REAL NOT NULL,
+    timestamp INTEGER NOT NULL,
+    received_at INTEGER NOT NULL,
+    PRIMARY KEY (friend_user_id, timestamp)
+);
+
+-- Queries
+
+getOwnLocationsBetween:
+SELECT * FROM own_location_history
+WHERE timestamp >= :fromTimestamp AND timestamp <= :toTimestamp
+ORDER BY timestamp ASC;
+
+insertOwnLocation:
+INSERT OR REPLACE INTO own_location_history (lat, lng, timestamp)
+VALUES (?, ?, ?);
+
+getLatestFriendsLocations:
+SELECT * FROM friends_location_history lh
+WHERE timestamp = (SELECT MAX(timestamp) FROM friends_location_history WHERE friend_user_id = lh.friend_user_id)
+ORDER BY friend_user_id;
+
+getLocationHistoryForFriend:
+SELECT * FROM friends_location_history
+WHERE friend_user_id = ?
+ORDER BY timestamp DESC
+LIMIT ?;
+
+insertLocationForFriend:
+INSERT OR REPLACE INTO friends_location_history (friend_user_id, lat, lng, timestamp, received_at)
+VALUES (?, ?, ?, ?, ?);
+
+deleteLocationsByFriend:
+DELETE FROM friends_location_history WHERE friend_user_id = ?;
+
+deleteOldFriendLocations:
+DELETE FROM friends_location_history WHERE received_at < ?;

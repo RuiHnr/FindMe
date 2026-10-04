@@ -1,0 +1,18 @@
+CREATE TABLE identity_pin(
+    user_id TEXT NOT NULL PRIMARY KEY,
+    identity_key_dh TEXT NOT NULL,
+    first_seen_at INTEGER NOT NULL,
+    last_verified_at INTEGER NOT NULL
+);
+
+-- Queries
+
+getPin:
+SELECT * FROM identity_pin WHERE user_id = ?;
+
+upsertPin:
+INSERT OR REPLACE INTO identity_pin (user_id, identity_key_dh, first_seen_at, last_verified_at)
+VALUES (?, ?, ?, ?);
+
+deletePin:
+DELETE FROM identity_pin WHERE user_id = ?;

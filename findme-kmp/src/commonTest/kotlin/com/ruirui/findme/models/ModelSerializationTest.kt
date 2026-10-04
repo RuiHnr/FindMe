@@ -1,0 +1,79 @@
+package com.ruirui.findme.models
+
+import kotlinx.serialization.json.Json
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+
+class ModelSerializationTest {
+
+    private val json = Json {
+        prettyPrint = false
+        ignoreUnknownKeys = true
+    }
+
+    @Test
+    fun testRegisterRequestSerialization() {
+        val request = RegisterRequest(
+            username = "alice",
+            identityKeyDh = "test_key_base64_dh",
+            identityKeySign = "test_key_base64_sign"
+        )
+        val jsonString = json.encodeToString(request)
+
+        // Assert field name serialization
+        assertEquals("""{"username":"alice","identity_key_dh":"test_key_base64_dh","identity_key_sign":"test_key_base64_sign"}""", jsonString)
+
+        val parsed = json.decodeFromString<RegisterRequest>(jsonString)
+        assertEquals(request, parsed)
+    }
+
+    @Test
+    fun testPreKeyBundleResponseDeserialization() {
+        val rawJson = """
+            {
+                "user_id": "123e4567-e89b-12d3-a456-426614174000",
+                "identity_key_dh": "alice_id_key_dh",
+                "identity_key_sign": "alice_id_key_sign",
+                "signed_prekey": {
+                    "key_id": 1,
+                    "public_key": "alice_spk_key",
+                    "signature": "alice_spk_sig"
+                },
+                "one_time_prekey": {
+                    "key_id": 101,
+                    "public_key": "alice_otpk_key"
+                }
+            }
+        """.trimIndent()
+
+        val bundle = json.decodeFromString<PreKeyBundleResponse>(rawJson)
+        assertEquals("123e4567-e89b-12d3-a456-426614174000", bundle.userId)
+        assertEquals("alice_id_key_dh", bundle.identityKeyDh)
+        assertEquals("alice_id_key_sign", bundle.identityKeySign)
+        assertEquals(1, bundle.signedPreKey.keyId)
+        assertNotNull(bundle.oneTimePreKey)
+        assertEquals(101, bundle.oneTimePreKey.keyId)
+    }
+
+    @Test
+    fun testPreKeyBundleResponseWithoutOneTimePreKey() {
+        val rawJson = """
+            {
+                "user_id": "123e4567-e89b-12d3-a456-426614174000",
+                "identity_key_dh": "alice_id_key_dh",
+                "identity_key_sign": "alice_id_key_sign",
+                "signed_prekey": {
+                    "key_id": 1,
+                    "public_key": "alice_spk_key",
+                    "signature": "alice_spk_sig"
+                },
+                "one_time_prekey": null
+            }
+        """.trimIndent()
+
+        val bundle = json.decodeFromString<PreKeyBundleResponse>(rawJson)
+        assertNull(bundle.oneTimePreKey)
+    }
+}
