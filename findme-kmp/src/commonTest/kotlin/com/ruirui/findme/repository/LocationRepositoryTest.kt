@@ -3,7 +3,6 @@ package com.ruirui.findme.repository
 import com.ruirui.findme.crypto.CryptoKotlinAdapter
 import com.ruirui.findme.crypto.SessionStoreImpl
 import com.ruirui.findme.fakes.FakeBackend
-import com.ruirui.findme.network.api.FriendsApi
 import com.ruirui.findme.network.api.KeysApi
 import com.ruirui.findme.network.api.LocationApi
 import com.ruirui.findme.storage.InMemorySecureStorage
@@ -30,8 +29,6 @@ class LocationRepositoryTest {
         storage.putString(SecureStorageKeys.USER_ID, "alice_id")
 
         val db = com.ruirui.findme.db.createTestDatabase()
-        val friendRepo = FriendRepositoryImpl(FriendsApi(client), db, backgroundScope)
-
         val preKeyManager = com.ruirui.findme.crypto.PreKeyManagerImpl(crypto, storage, KeysApi(client), db)
         val repo = LocationRepositoryImpl(
             LocationApi(client),

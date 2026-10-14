@@ -56,7 +56,7 @@ class FriendsApi(private val client: HttpClient) {
      * 
      * @return [Result] containing a list of [FriendRequest] waiting for approval.
      */
-    suspend fun getFriendRequests(): Result<List<FriendRequest>> {
+    suspend fun getFriendRequests(): Result<List<FriendDto>> {
         return safeApiCall {
             client.get("/friends/requests")
         }

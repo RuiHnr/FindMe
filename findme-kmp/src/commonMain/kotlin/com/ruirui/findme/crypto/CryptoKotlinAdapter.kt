@@ -7,6 +7,7 @@ import dev.whyoleg.cryptography.algorithms.EdDSA
 import dev.whyoleg.cryptography.algorithms.HKDF
 import dev.whyoleg.cryptography.algorithms.HMAC
 import dev.whyoleg.cryptography.algorithms.SHA256
+import dev.whyoleg.cryptography.algorithms.SHA512
 import dev.whyoleg.cryptography.algorithms.XDH
 
 /**
@@ -49,6 +50,12 @@ class CryptoKotlinAdapter(private val provider: CryptographyProvider = Cryptogra
             .decodeFromByteArray(HMAC.Key.Format.RAW, key)
             .signatureGenerator()
             .generateSignature(data)
+    }
+
+    override suspend fun sha512(data: ByteArray): ByteArray {
+        return provider.get(SHA512)
+            .hasher()
+            .hash(data)
     }
 
     override suspend fun encryptAesGcm(

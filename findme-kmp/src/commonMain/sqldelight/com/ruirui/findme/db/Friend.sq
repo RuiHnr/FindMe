@@ -5,7 +5,10 @@ CREATE TABLE friend (
 );
 
 CREATE TABLE friend_request (
-    target_username TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT NOT NULL PRIMARY KEY,
+    username TEXT NOT NULL,
+    identity_key_dh TEXT NOT NULL,
+    identity_key_sign TEXT NOT NULL,
     direction TEXT NOT NULL DEFAULT 'inbound',
     created_at INTEGER NOT NULL DEFAULT 0
 );
@@ -29,11 +32,11 @@ getAllFriendRequests:
 SELECT * FROM friend_request WHERE direction = 'inbound' ORDER BY created_at DESC;
 
 insertFriendRequest:
-INSERT OR REPLACE INTO friend_request (target_username, direction, created_at)
-VALUES (?, ?, ?);
+INSERT OR REPLACE INTO friend_request (user_id, username, identity_key_dh, identity_key_sign, direction, created_at)
+VALUES (:userId, :username, :identityKeyDh, :identityKeySign, :direction, :createdAt);
 
 deleteFriendRequest:
-DELETE FROM friend_request WHERE target_username = ?;
+DELETE FROM friend_request WHERE username = ?;
 
 deleteAllFriendRequests:
 DELETE FROM friend_request;

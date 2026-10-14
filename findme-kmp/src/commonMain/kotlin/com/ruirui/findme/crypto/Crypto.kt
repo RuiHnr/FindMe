@@ -19,6 +19,12 @@ interface Crypto {
     suspend fun hmacSha256(key: ByteArray, data: ByteArray): ByteArray
 
     /**
+     * Computes the SHA-512 hash of a byte array.
+     * Used in the Safety Number Generation.
+     */
+    suspend fun sha512(data: ByteArray): ByteArray
+
+    /**
      * Encrypts plaintext using AES-256-GCM. 
      * Auto-generates a secure 12-byte IV, returning it prepended to the ciphertext.
      *

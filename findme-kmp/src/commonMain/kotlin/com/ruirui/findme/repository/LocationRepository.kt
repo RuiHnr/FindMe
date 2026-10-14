@@ -11,6 +11,7 @@ import com.ruirui.findme.crypto.initX3DH
 import com.ruirui.findme.crypto.receiveX3DH
 import com.ruirui.findme.db.FindMeDatabase
 import com.ruirui.findme.models.FriendDto
+import com.ruirui.findme.models.IdentityKeyMismatchException
 import com.ruirui.findme.models.LocationPayload
 import com.ruirui.findme.models.MessageHeader
 import com.ruirui.findme.models.NormalSignalEnvelope
@@ -171,7 +172,53 @@ class LocationRepositoryImpl(
             // 1a. Fetch friend's PreKey Bundle
             val preKeyBundle = keysApi.getPreKeyBundle(friendId).getOrThrow()
 
-            // 1b. Verify signature
+            // 1b TOFU check: verify bob's identity keys against local pin
+            val existingPin = db.identityPinQueries.getPin(friendId).executeAsOneOrNull()
+            if (existingPin != null) {
+                if (existingPin.identity_key_dh != preKeyBundle.identityKeyDh) {
+                    // Flag pin as untrusted in DB
+                    db.identityPinQueries.updateTrustStatus(
+                        isTrusted = 0L,
+                        lastVerifiedAt = getTimeMillis(),
+                        userId = friendId
+                    )
+                    throw IdentityKeyMismatchException(
+                        friendUserId = friendId,
+                        keyType = "DH",
+                        pinnedKeyBase64 = existingPin.identity_key_dh,
+                        receivedKeyBase64 = preKeyBundle.identityKeyDh
+                    )
+                }
+                if (existingPin.identity_key_sign != preKeyBundle.identityKeySign) {
+                    throw IdentityKeyMismatchException(
+                        friendUserId = friendId,
+                        keyType = "SIGN",
+                        pinnedKeyBase64 = existingPin.identity_key_sign,
+                        receivedKeyBase64 = preKeyBundle.identityKeySign
+                    )
+                }
+                // Update last verified timestamp
+                db.identityPinQueries.upsertPin(
+                    user_id = friendId,
+                    identity_key_dh = existingPin.identity_key_dh,
+                    identity_key_sign = existingPin.identity_key_sign,
+                    first_seen_at = existingPin.first_seen_at,
+                    last_verified_at = getTimeMillis(),
+                    is_trusted = 1L
+                )
+            } else {
+                // First contact: TOFU pinning
+                db.identityPinQueries.upsertPin(
+                    user_id = friendId,
+                    identity_key_dh = preKeyBundle.identityKeyDh,
+                    identity_key_sign = preKeyBundle.identityKeySign,
+                    first_seen_at = getTimeMillis(),
+                    last_verified_at = getTimeMillis(),
+                    is_trusted = 1L
+                )
+            }
+
+            // 1c. Verify signature
             if (!crypto.verify(
                     Base64.decode(preKeyBundle.identityKeySign),
                     Base64.decode(preKeyBundle.signedPreKey.publicKey),
@@ -181,7 +228,7 @@ class LocationRepositoryImpl(
                 throw Exception("Invalid signature from $friendId")
             }
 
-            // 1c. Fetch our own keys
+            // 1d. Fetch our own keys
             val identityPrivateKeyBase64 =
                 secureStorage.getString(SecureStorageKeys.IDENTITY_PRIVATE_KEY_DH)
                     ?: throw Exception("Identity private key not found")
@@ -191,7 +238,7 @@ class LocationRepositoryImpl(
 
             val baseKey = crypto.generateX25519KeyPair()
 
-            // 1d. Perform X3DH
+            // 1e. Perform X3DH
             val sharedSecret = initX3DH(
                 crypto = crypto,
                 aliceIdentityPrivateKey = Base64.decode(identityPrivateKeyBase64),
@@ -205,17 +252,17 @@ class LocationRepositoryImpl(
                 }
             )
 
-            // 1e. Initialize Session
+            // 1f. Initialize Session
             session = DoubleRatchetSession.initAlice(
                 sharedSecret = sharedSecret,
                 bobSignedPreKeyPub = Base64.decode(preKeyBundle.signedPreKey.publicKey),
                 crypto = crypto
             )
 
-            // 1f. Encrypt the location payload using the NEW session
+            // 1g. Encrypt the location payload using the NEW session
             val encrypted = session.encrypt(payload.toByteArray())
 
-            // 1g. Create the PreKeySignalEnvelope
+            // 1h. Create the PreKeySignalEnvelope
             envelope = PreKeySignalEnvelope(
                 header = MessageHeader(
                     aliceIdentityKeyDh = identityPublicKeyBase64,
@@ -243,6 +290,33 @@ class LocationRepositoryImpl(
 
             is PreKeySignalEnvelope -> {
                 val header = envelope.header
+
+                // Check for identity pin mismatch
+                val existingPin =
+                    db.identityPinQueries.getPin(friendId).executeAsOneOrNull()
+                if (existingPin != null && existingPin.identity_key_dh != header.aliceIdentityKeyDh) {
+                    // IDENTITY KEY CHANGED! Possible MITM or device reset.
+                    db.identityPinQueries.updateTrustStatus(
+                        isTrusted = 0L,
+                        lastVerifiedAt = getTimeMillis(),
+                        userId = friendId
+                    )
+                    throw IdentityKeyMismatchException(
+                        friendUserId = friendId,
+                        keyType = "DH",
+                        pinnedKeyBase64 = existingPin.identity_key_dh,
+                        receivedKeyBase64 = header.aliceIdentityKeyDh
+                    )
+                }
+                // Save the new pin
+                db.identityPinQueries.upsertPin(
+                    user_id = friendId,
+                    identity_key_dh = header.aliceIdentityKeyDh,
+                    identity_key_sign = existingPin?.identity_key_sign ?: "", // updated during reciprocal exchange or friends sync
+                    first_seen_at = existingPin?.first_seen_at ?: getTimeMillis(),
+                    last_verified_at = getTimeMillis(),
+                    is_trusted = 1L
+                )
 
                 // Fetch our own keys (Bob's perspective)
                 val bobIdentityPrivateKey =
@@ -280,22 +354,6 @@ class LocationRepositoryImpl(
                     aliceBasePublicKey = Base64.decode(header.aliceBaseKeyDh)
                 )
 
-                // Check for identity pin mismatch
-                val existingPin =
-                    db.identityPinQueries.getPin(friendId).executeAsOneOrNull()
-                if (existingPin != null && existingPin.identity_key_dh != header.aliceIdentityKeyDh) {
-                    // IDENTITY KEY CHANGED! Possible MITM or device reset.
-                    // Signal shows a "Safety Number changed" warning here.
-                    throw Exception("Identity key mismatch for $friendId! Expected ${existingPin.identity_key_dh}")
-                }
-                // Save the new pin
-                db.identityPinQueries.upsertPin(
-                    user_id = friendId,
-                    identity_key_dh = header.aliceIdentityKeyDh,
-                    first_seen_at = existingPin?.first_seen_at ?: getTimeMillis(),
-                    last_verified_at = getTimeMillis()
-                )
-
                 // Initialize and return the session
                 DoubleRatchetSession.initBob(
                     sharedSecret = sharedSecret,
@@ -317,6 +375,6 @@ class LocationRepositoryImpl(
         // 3. Save the advanced state
         sessionStore.saveSession(friendId, session)
 
-        return jsonString;
+        return jsonString
     }
 }
