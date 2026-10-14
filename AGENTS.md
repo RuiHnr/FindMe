@@ -1,7 +1,7 @@
-# FindMe - Agent Context & Guidelines
+# Orbit - Agent Context & Guidelines
 
 ## 1. Project Overview
-**FindMe** is an open-source, cross-platform mobile application (iOS & Android) designed for continuous, privacy-first background location sharing among friends and family.
+**Orbit** is an open-source, cross-platform mobile application (iOS & Android) designed for continuous, privacy-first background location sharing among friends and family.
 
 ### Key Architecture Principles
 1. **Uncompromising Privacy (E2EE):** The server acts strictly as an encrypted data relay (`location_inbox`). Location payloads are encrypted on the client using the Signal Protocol (X3DH + Double Ratchet) before transmission. The server cannot decrypt location data.
@@ -13,20 +13,20 @@
 ## 2. Repository Structure
 
 ```
-FindMe/
+Orbit/
 ├── AGENTS.md                      # Project guidelines & agent context (this file)
 ├── docs/
 │   ├── progress.md                # Overview of current progress & immediate next steps
 │   ├── architecture/
 │   │   ├── schema.dbml            # Backend PostgreSQL schema definition (DBML)
 │   │   └── cryptography.md        # E2EE protocol design notes
-│   └── findme-kmp/
+│   └── kmp/
 │       ├── plan.md                # KMP implementation roadmap & progress checklist
 │       ├── Signal Implementation Guide.md
 │       ├── Repository Layer Guide.md
 │       ├── Local DB Migration Guide.md
 │       └── Background Sync Guide.md
-├── findme-backend/                # Rust Axum Backend
+├── server/                        # Rust Axum Backend
 │   ├── Cargo.toml
 │   ├── backend-plan.md
 │   └── src/
@@ -36,7 +36,7 @@ FindMe/
 │       ├── handlers/              # HTTP handlers (auth, friends, keys, location)
 │       ├── db/                    # SQL query functions (auth, friends, keys, location)
 │       └── models/                # Serde DTOs (auth, friends, keys, location)
-├── findme-kmp/                    # Kotlin Multiplatform shared core
+├── kmp/                           # Kotlin Multiplatform shared core
 │   ├── build.gradle.kts
 │   └── src/
 │       ├── commonMain/            # Models, Ktor Client, Signal Crypto, SQLDelight, Repositories
@@ -52,11 +52,11 @@ FindMe/
 ---
 
 ## 2.1 Progress & Next Steps
-For a detailed breakdown of completed milestones, immediate action items, and phased status, see [docs/findme-kmp/plan.md](file:///c:/Users/lauri/Documents/OwnProjects/FindMe/docs/findme-kmp/plan.md).
+For a detailed breakdown of completed milestones, immediate action items, and phased status, see [docs/kmp/plan.md](file:///c:/Users/lauri/Documents/OwnProjects/Orbit/docs/kmp/plan.md).
 
 ---
 
-## 3. Rust Backend Architecture (`findme-backend`)
+## 3. Rust Backend Architecture (`server`)
 
 ### Tech Stack
 - **Framework:** Axum (`v0.8`)
@@ -97,6 +97,6 @@ For a detailed breakdown of completed milestones, immediate action items, and ph
 
 For deep-dive context on specific components, read the skills in `.agents/skills/`:
 
-- **`findme-architecture`** — System architecture, E2EE protocol, component diagram
-- **`findme-backend`** — Full source map, all endpoints, DB schema, auth flow
-- **`findme-kmp`** — Full source map (49 files), data flows, crypto rules, storage split, testing patterns
+- **`architecture`** — System architecture, E2EE protocol, component diagram
+- **`backend`** — Full source map, all endpoints, DB schema, auth flow
+- **`kmp`** — Full source map (49 files), data flows, crypto rules, storage split, testing patterns

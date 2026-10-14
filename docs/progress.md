@@ -1,4 +1,4 @@
-# Project Progress & Roadmap: FindMe
+# Project Progress & Roadmap: Orbit
 
 **Last Updated:** September 2026
 
@@ -6,7 +6,7 @@
 
 ## 1. Executive Summary
 
-FindMe is currently in **Phase 4: Implementation** of its roadmap.
+Orbit is currently in **Phase 4: Implementation** of its roadmap.
 
 - **Backend Infrastructure:** The core Rust (Axum + PostgreSQL) backend is setup and functional with
   modular separation
@@ -44,7 +44,7 @@ FindMe is currently in **Phase 4: Implementation** of its roadmap.
 ### Priority 1: Backend Security & Authentication
 
 - [x] **JWT Authentication Implementation:**
-    - Add `jsonwebtoken` dependency to `findme-backend/Cargo.toml`.
+    - Add `jsonwebtoken` dependency to `backend/Cargo.toml`.
     - Issue signed JWT Bearer tokens upon user registration (`POST /users/register`).
     - Create Axum auth middleware (`axum::middleware::from_fn`) to validate Bearer tokens on
       protected endpoints.
@@ -58,7 +58,7 @@ FindMe is currently in **Phase 4: Implementation** of its roadmap.
 - [x] **`sqlx` Migrations Setup:**
     - Transition from dynamic runtime initialization in `db::init_db()` to managed `sqlx` migration
       files
-      (`findme-backend/migrations/`).
+      (`backend/migrations/`).
     - Create baseline migration `0001_init_schema.sql` based on `schema.dbml`.
 - [x] **Friendship System Implementation:**
     - Implement DB table `friendships` (`user_id_a`, `user_id_b`, `status` ['pending', 'accepted'],
@@ -71,13 +71,13 @@ FindMe is currently in **Phase 4: Implementation** of its roadmap.
 
 ### Priority 3: Mobile Client Integration (KMP)
 
-- [x] **Kotlin Multiplatform Core Module (`findme-kmp`):** (See detailed
-  plan: [docs/findme-kmp/plan.md](file:///c:/Users/Laurin/Documents/Uni/OwnProjects/FindMe/docs/findme-kmp/plan.md))
+- [x] **Kotlin Multiplatform Core Module (`kmp`):** (See detailed
+  plan: [docs/kmp/plan.md](file:///c:/Users/Laurin/Documents/Uni/OwnProjects/Orbit/docs/kmp/plan.md))
     - [x] Project and build setup targeting Android and iOS.
     - [x] Shared data models mirroring backend Axum Serde types (`@Serializable`).
     - [x] Secure storage abstraction: `SecureStorage` interface, Android Keystore + Jetpack
       DataStore implementation, and contract unit tests with `InMemorySecureStorage`.
-    - [x] Ktor HTTP client (`FindMeApiClient`) with automatic JWT bearer authentication.
+    - [x] Ktor HTTP client (`OrbitApiClient`) with automatic JWT bearer authentication.
     - [x] Signal Protocol (X3DH + Double Ratchet) cryptography engine.
     - [x] Repository layer with reactive `StateFlow` streams.
     - [x] Comprehensive Test Suite (E2E Message Exchange and Mock APIs).

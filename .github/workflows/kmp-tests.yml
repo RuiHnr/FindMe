@@ -3,13 +3,13 @@ name: KMP Tests
 on:
   push:
     paths:
-      - 'findme-kmp/**'
+      - 'kmp/**'
       - 'gradle/**'
       - 'build.gradle.kts'
       - 'settings.gradle.kts'
   pull_request:
     paths:
-      - 'findme-kmp/**'
+      - 'kmp/**'
       - 'gradle/**'
       - 'build.gradle.kts'
       - 'settings.gradle.kts'
@@ -40,11 +40,11 @@ jobs:
       - name: Run KMP tests
         run: |
           chmod +x gradlew
-          ./gradlew :findme-kmp:testAndroidHostTest --no-daemon
+          ./gradlew :kmp:testAndroidHostTest --no-daemon
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: findme-kmp/build/test-results/testAndroidHostTest/
+          path: kmp/build/test-results/testAndroidHostTest/
