@@ -45,7 +45,10 @@ pub fn build_router(state: AppState) -> Router {
         .route("/keys/count", get(handlers::keys::get_key_count))
         .route("/keys/{user_id}", get(handlers::keys::get_prekey_bundle))
         // Device Tokens
-        .route("/device_token", post(handlers::device_token::post_device_token))
+        .route(
+            "/device_token",
+            post(handlers::device_token::post_device_token),
+        )
         .route_layer(from_fn_with_state(state.clone(), auth_middleware))
         // All endpoints below are not authenticated via JWT
         .route(
