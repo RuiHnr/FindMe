@@ -7,8 +7,8 @@ plugins {
 
 sqldelight {
     databases {
-        create("FindMeDatabase") {
-            packageName.set("com.ruirui.findme.db")
+        create("OrbitDatabase") {
+            packageName.set("com.ruirui.orbit.db")
         }
     }
 }
@@ -19,7 +19,7 @@ kotlin {
     }
 
     android {
-        namespace = "com.ruirui.findme.kmp"
+        namespace = "com.ruirui.orbit.kmp"
         compileSdk = 37
         minSdk = 26
         withHostTest { }
@@ -31,7 +31,7 @@ kotlin {
         iosSimulatorArm64()
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
-            baseName = "FindMeCore"
+            baseName = "OrbitCore"
             isStatic = true
         }
     }

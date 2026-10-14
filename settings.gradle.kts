@@ -14,9 +14,10 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "FindMe"
+rootProject.name = "Orbit"
 
-// Include your shared KMP module and the Android app:
-include(":findme-kmp")
+// Include shared KMP module and Android app:
+include(":kmp")
+project(":kmp").projectDir = file("kmp")
 include(":spikes:androidlocationspike:app")
 project(":spikes:androidlocationspike:app").projectDir = file("spikes/androidlocationspike/app")

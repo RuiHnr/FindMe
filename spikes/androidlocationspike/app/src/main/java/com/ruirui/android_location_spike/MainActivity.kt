@@ -85,7 +85,7 @@ fun LocationSpikeScreen() {
         modifier = Modifier.fillMaxSize().padding(16.dp)
     ) {
         Text(
-            text = "FindMe Background Spike",
+            text = "Orbit Background Spike",
             style = MaterialTheme.typography.headlineMedium
         )
         Spacer(modifier = Modifier.padding(16.dp))

@@ -1,4 +1,4 @@
-# FindMe Background Sync Guide
+# Orbit Background Sync Guide
 
 A hands-on, step-by-step guide for implementing battery-efficient background location sharing
 with adaptive update frequency based on watcher presence.
@@ -74,13 +74,13 @@ Bob closes app
 
 ---
 
-## 3. Backend Changes (`findme-backend`)
+## 3. Server Changes (`server`)
 
 ### 3.1 New Database Table: `active_sessions`
 
 This tracks which users have the app open and are actively viewing the map.
 
-Add to `docs/findme-backend/schema.dbml`:
+Add to `docs/backend/schema.dbml`:
 
 ```dbml
 Table active_sessions {
@@ -132,7 +132,7 @@ pub async fn remove_presence(pool: &PgPool, user_id: Uuid) -> Result<(), sqlx::E
 
 ### 3.2 New Database Table: `device_tokens`
 
-Add to `docs/findme-backend/schema.dbml`:
+Add to `docs/backend/schema.dbml`:
 
 ```dbml
 Table device_tokens {
@@ -338,13 +338,13 @@ In `src/lib.rs`, add within the authenticated router:
 
 The single entry point for all sync logic, called from both foreground UI and background services.
 
-Create `findme-kmp/src/commonMain/kotlin/com/ruirui/findme/sync/SyncOrchestrator.kt`:
+Create `kmp/src/commonMain/kotlin/com/ruirui/orbit/sync/SyncOrchestrator.kt`:
 
 ```kotlin
-package com.ruirui.findme.sync
+package orbit.sync
 
-import com.ruirui.findme.repository.FriendRepository
-import com.ruirui.findme.repository.LocationRepository
+import orbit.repository.FriendRepository
+import orbit.repository.LocationRepository
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -400,12 +400,12 @@ class SyncOrchestrator(
 
 Handles heartbeat and presence lifecycle.
 
-Create `findme-kmp/src/commonMain/kotlin/com/ruirui/findme/sync/PresenceManager.kt`:
+Create `kmp/src/commonMain/kotlin/com/ruirui/orbit/sync/PresenceManager.kt`:
 
 ```kotlin
-package com.ruirui.findme.sync
+package orbit.sync
 
-import com.ruirui.findme.network.api.PresenceApi
+import orbit.network.api.PresenceApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -452,12 +452,12 @@ class PresenceManager(
 
 ### 4.3 New: `PresenceApi`
 
-Create `findme-kmp/src/commonMain/kotlin/com/ruirui/findme/network/api/PresenceApi.kt`:
+Create `kmp/src/commonMain/kotlin/com/ruirui/orbit/network/api/PresenceApi.kt`:
 
 ```kotlin
-package com.ruirui.findme.network.api
+package orbit.network.api
 
-import com.ruirui.findme.network.safeApiCall
+import orbit.network.safeApiCall
 import io.ktor.client.HttpClient
 import io.ktor.client.request.delete
 import io.ktor.client.request.post
@@ -484,13 +484,13 @@ class PresenceApi(private val client: HttpClient) {
 Update `LocationApi.kt`:
 
 ```kotlin
-package com.ruirui.findme.network.api
+package orbit.network.api
 
-import com.ruirui.findme.models.InboxResponse
-import com.ruirui.findme.models.InboxMessage
-import com.ruirui.findme.models.SubmitLocationResponse
-import com.ruirui.findme.models.SubmitMessageRequest
-import com.ruirui.findme.network.safeApiCall
+import orbit.models.InboxResponse
+import orbit.models.InboxMessage
+import orbit.models.SubmitLocationResponse
+import orbit.models.SubmitMessageRequest
+import orbit.network.safeApiCall
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -582,19 +582,19 @@ androidx-work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref
 firebase-messaging = { module = "com.google.firebase:firebase-messaging", version.ref = "firebase-messaging" }
 ```
 
-### 5.2 Push Receiver (`FindMeMessagingService`)
+### 5.2 Push Receiver (`OrbitMessagingService`)
 
 Create a service extending `FirebaseMessagingService` to catch the silent push and wake the location
 service.
 
 ```kotlin
-package com.ruirui.findme.location
+package orbit.location
 
 import android.content.Intent
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 
-class FindMeMessagingService : FirebaseMessagingService() {
+class OrbitMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
@@ -617,10 +617,10 @@ class FindMeMessagingService : FirebaseMessagingService() {
 ### 5.3 `LocationSharingService` (Foreground Service)
 
 Create in the Android app module:
-`app/src/main/java/com/ruirui/findme/location/LocationSharingService.kt`
+`app/src/main/java/com/ruirui/orbit/location/LocationSharingService.kt`
 
 ```kotlin
-package com.ruirui.findme.location
+package orbit.location
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -637,7 +637,7 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import com.ruirui.findme.sync.SyncOrchestrator
+import orbit.sync.SyncOrchestrator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -666,7 +666,7 @@ class LocationSharingService : Service() {
     private enum class Mode { HIGH, LOW }
 
     companion object {
-        private const val CHANNEL_ID = "findme_location_channel"
+        private const val CHANNEL_ID = "orbit_location_channel"
         private const val NOTIFICATION_ID = 1
         private const val HIGH_INTERVAL_MS = 5_000L
         private const val LOW_INTERVAL_MS = 300_000L  // 5 minutes
@@ -693,13 +693,13 @@ class LocationSharingService : Service() {
     private fun startForegroundNotification() {
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "FindMe Location Sharing",
+            "Orbit Location Sharing",
             NotificationManager.IMPORTANCE_LOW
         )
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("FindMe is sharing your location")
+            .setContentTitle("Orbit is sharing your location")
             .setContentText("Your friends can see where you are")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setOngoing(true)
@@ -729,7 +729,7 @@ class LocationSharingService : Service() {
             locationCallback = callback
             currentMode = mode
         } catch (e: SecurityException) {
-            Log.e("FindMe", "Lost location permissions", e)
+            Log.e("Orbit", "Lost location permissions", e)
         }
     }
 
@@ -740,8 +740,8 @@ class LocationSharingService : Service() {
         }
         lastSentLocation = location
 
-        val repo = FindMeApp.instance.locationRepository
-        val orchestrator = FindMeApp.instance.syncOrchestrator
+        val repo = OrbitApp.instance.locationRepository
+        val orchestrator = OrbitApp.instance.syncOrchestrator
 
         serviceScope.launch {
             repo.submitLocalLocation(location.latitude, location.longitude)
@@ -760,10 +760,10 @@ class LocationSharingService : Service() {
 
 ### 5.4 `InboxSyncWorker` (WorkManager Periodic Fallback)
 
-Create `app/src/main/java/com/ruirui/findme/location/InboxSyncWorker.kt`:
+Create `app/src/main/java/com/ruirui/orbit/location/InboxSyncWorker.kt`:
 
 ```kotlin
-package com.ruirui.findme.location
+package orbit.location
 
 import android.content.Context
 import android.util.Log
@@ -772,7 +772,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import com.ruirui.findme.sync.SyncOrchestrator
+import orbit.sync.SyncOrchestrator
 import java.util.concurrent.TimeUnit
 
 /**
@@ -784,22 +784,22 @@ class InboxSyncWorker(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        val orchestrator: SyncOrchestrator = FindMeApp.instance.syncOrchestrator
+        val orchestrator: SyncOrchestrator = OrbitApp.instance.syncOrchestrator
 
         return orchestrator.syncAll().fold(
             onSuccess = {
-                Log.d("FindMe", "Periodic sync succeeded")
+                Log.d("Orbit", "Periodic sync succeeded")
                 Result.success()
             },
             onFailure = { error ->
-                Log.e("FindMe", "Periodic sync failed", error)
+                Log.e("Orbit", "Periodic sync failed", error)
                 Result.retry()
             }
         )
     }
 
     companion object {
-        private const val WORK_NAME = "findme_inbox_sync"
+        private const val WORK_NAME = "orbit_inbox_sync"
 
         fun enqueue(context: Context) {
             val request = PeriodicWorkRequestBuilder<InboxSyncWorker>(15, TimeUnit.MINUTES).build()
@@ -832,7 +832,7 @@ android:name="android.permission.POST_NOTIFICATIONS" />
 <service android:name=".location.LocationSharingService" android:exported="false"
 android:foregroundServiceType="location" />
 
-<service android:name=".location.FindMeMessagingService" android:exported="true">
+<service android:name=".location.OrbitMessagingService" android:exported="true">
 <intent-filter>
     <action android:name="com.google.firebase.MESSAGING_EVENT" />
 </intent-filter>
@@ -855,15 +855,15 @@ In your iOS app's `Info.plist`:
 <string>remote-notification</string> <!-- Silent Push wake ups -->
 </array>
 
-<key>NSLocationAlwaysAndWhenInUseUsageDescription</key><string>FindMe shares your location with
+<key>NSLocationAlwaysAndWhenInUseUsageDescription</key><string>Orbit shares your location with
 friends you've added.
 </string>
 
-<key>NSLocationWhenInUseUsageDescription</key><string>FindMe shows your location on the map.
+<key>NSLocationWhenInUseUsageDescription</key><string>Orbit shows your location on the map.
 </string>
 
 <key>BGTaskSchedulerPermittedIdentifiers</key><array>
-<string>com.ruirui.findme.inbox-sync</string>
+<string>com.ruirui.orbit.inbox-sync</string>
 </array>
 ```
 
@@ -877,7 +877,7 @@ func application(
 ) {
     if userInfo["type"] as? String == "wake_up" {
         // Friend is watching. Switch to HIGH mode.
-        FindMeDI.shared.locationSharingManager.forceHighMode()
+        OrbitDI.shared.locationSharingManager.forceHighMode()
         
         // Let OS know we received data
         completionHandler(.newData)
@@ -891,7 +891,7 @@ func application(
 
 ```swift
 import CoreLocation
-import FindMeCore  // KMP framework
+import OrbitCore  // KMP framework
 
 /**
  * Manages continuous background location sharing on iOS.
@@ -990,7 +990,7 @@ class LocationSharingManager: NSObject, CLLocationManagerDelegate {
 
 func registerBackgroundSync() {
     BGTaskScheduler.shared.register(
-        forTaskWithIdentifier: "com.ruirui.findme.inbox-sync",
+        forTaskWithIdentifier: "orbit.inbox-sync",
         using: nil
     ) { task in
         self.handleBackgroundSync(task: task as! BGAppRefreshTask)
@@ -998,7 +998,7 @@ func registerBackgroundSync() {
 }
 
 func scheduleBackgroundSync() {
-    let request = BGAppRefreshTaskRequest(identifier: "com.ruirui.findme.inbox-sync")
+    let request = BGAppRefreshTaskRequest(identifier: "orbit.inbox-sync")
     request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
     try? BGTaskScheduler.shared.submit(request)
 }
@@ -1007,7 +1007,7 @@ private func handleBackgroundSync(task: BGAppRefreshTask) {
     scheduleBackgroundSync()  // Schedule next occurrence
 
     let syncTask = Task {
-        _ = try? await FindMeDI.shared.syncOrchestrator.syncAll()
+        _ = try? await OrbitDI.shared.syncOrchestrator.syncAll()
     }
 
     task.expirationHandler = { syncTask.cancel() }
@@ -1104,7 +1104,7 @@ Backend:
 - [x] 4. Update `POST /presence` to trigger silent pushes
 - [x] 5. Ensure `POST /inbox` returns `accepted` count (no watchers)
 
-KMP Shared (findme-kmp):
+KMP Shared (kmp):
 - [x] 6. Update `LocationApi.submitMessages()` to accept List
 - [ ] 7. Add `DeviceApi` to register push tokens
 - [x] 8. Create `SyncOrchestrator` in `commonMain/sync/`
@@ -1114,7 +1114,7 @@ KMP Shared (findme-kmp):
 
 Android:
 - [x] 12. Add WorkManager & Firebase Cloud Messaging dependencies
-- [x] 13. Implement `FindMeMessagingService` for silent pushes
+- [x] 13. Implement `OrbitMessagingService` for silent pushes
 - [x] 14. Create `LocationSharingService` with adaptive HIGH/LOW modes
 - [x] 15. Create `InboxSyncWorker` (periodic fallback)
 - [ ] 16. Register service + permissions in AndroidManifest.xml
@@ -1181,15 +1181,15 @@ class SyncOrchestratorTest {
 
 | Action       | File Path                                                                                 |
 |--------------|-------------------------------------------------------------------------------------------|
-| **[NEW]**    | `findme-backend/src/db/presence.rs` — Active sessions CRUD                                |
-| **[NEW]**    | `findme-backend/src/db/device_tokens.rs` — Device token CRUD (FCM/APNs)                   |
-| **[NEW]**    | `findme-backend/src/handlers/presence.rs` — Heartbeat (triggers push)                     |
-| **[MODIFY]** | `findme-backend/src/handlers/location.rs` — Accept array, return `SubmitLocationResponse` |
-| **[NEW]**    | `findme-kmp/.../sync/SyncOrchestrator.kt` — Mutex-protected sync coordinator              |
-| **[NEW]**    | `findme-kmp/.../sync/PresenceManager.kt` — Heartbeat lifecycle manager                    |
-| **[NEW]**    | `findme-kmp/.../network/api/PresenceApi.kt` — `/presence` HTTP client                     |
-| **[MODIFY]** | `findme-kmp/.../network/api/LocationApi.kt` — `submitMessages(List)`                      |
-| **[NEW]**    | Android `FindMeMessagingService.kt` — Silent push receiver                                |
+| **[NEW]**    | `backend/src/db/presence.rs` — Active sessions CRUD                                |
+| **[NEW]**    | `backend/src/db/device_tokens.rs` — Device token CRUD (FCM/APNs)                   |
+| **[NEW]**    | `backend/src/handlers/presence.rs` — Heartbeat (triggers push)                     |
+| **[MODIFY]** | `backend/src/handlers/location.rs` — Accept array, return `SubmitLocationResponse` |
+| **[NEW]**    | `kmp/.../sync/SyncOrchestrator.kt` — Mutex-protected sync coordinator              |
+| **[NEW]**    | `kmp/.../sync/PresenceManager.kt` — Heartbeat lifecycle manager                    |
+| **[NEW]**    | `kmp/.../network/api/PresenceApi.kt` — `/presence` HTTP client                     |
+| **[MODIFY]** | `kmp/.../network/api/LocationApi.kt` — `submitMessages(List)`                      |
+| **[NEW]**    | Android `OrbitMessagingService.kt` — Silent push receiver                                 |
 | **[NEW]**    | Android `LocationSharingService.kt` — Adaptive foreground service                         |
 | **[NEW]**    | Android `InboxSyncWorker.kt` — WorkManager periodic fallback                              |
 | **[MODIFY]** | Android `AndroidManifest.xml` — Register services + permissions                           |
@@ -1239,7 +1239,7 @@ class SyncOrchestratorTest {
     showing a one-time prompt linking to [dontkillmyapp.com](https://dontkillmyapp.com/).
 
 12. **iOS App Store review requires justification for background location.** Your App Store
-    description must clearly state that FindMe is a location-sharing app and uses location in the
+    description must clearly state that Orbit is a location-sharing app and uses location in the
     background.
 
 13. **iOS uses distance-based triggers, not time-based intervals.** Unlike Android's

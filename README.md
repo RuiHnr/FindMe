@@ -1,7 +1,7 @@
-# Project Architecture & Implementation Plan: FindMe
+# Project Architecture & Implementation Plan: Orbit
 
 ## 1. Project Overview
-**FindMe** is an open-source, cross-platform mobile application (iOS & Android) designed for continuous background location sharing among friends and family. 
+**Orbit** is an open-source, cross-platform mobile application (iOS & Android) designed for continuous background location sharing among friends and family. 
 **Core Philosophy:**
 1. Uncompromising Privacy (End-to-End Encryption).
 2. Extreme Battery Efficiency (Native OS integration).
