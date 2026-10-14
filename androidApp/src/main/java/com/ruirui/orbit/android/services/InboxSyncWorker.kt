@@ -1,4 +1,4 @@
-package com.ruirui.orbit.location
+package com.ruirui.orbit.android.services
 
 import android.content.Context
 import android.util.Log
@@ -7,7 +7,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import com.ruirui.orbit.app.OrbitApp
+import com.ruirui.orbit.android.app.OrbitApp
 import com.ruirui.orbit.sync.SyncOrchestrator
 import java.util.concurrent.TimeUnit
 

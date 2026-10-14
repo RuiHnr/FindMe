@@ -18,3 +18,4 @@ rootProject.name = "Orbit"
 include(":kmp")
 include(":spikes:androidlocationspike:app")
 project(":spikes:androidlocationspike:app").projectDir = file("spikes/androidlocationspike/app")
+include(":androidApp")
