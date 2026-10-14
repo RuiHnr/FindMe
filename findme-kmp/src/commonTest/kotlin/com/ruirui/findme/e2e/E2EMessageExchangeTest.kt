@@ -42,7 +42,7 @@ class E2EMessageExchangeTest {
             crypto,
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default)
         )
-        val aliceFriendRepo = FriendRepositoryImpl(FriendsApi(aliceClient), aliceDb, backgroundScope)
+        val aliceFriendRepo = FriendRepositoryImpl(FriendsApi(aliceClient), KeysApi(aliceClient), aliceDb, backgroundScope)
         val aliceLocationRepo = LocationRepositoryImpl(
             LocationApi(aliceClient),
             KeysApi(aliceClient),
@@ -70,7 +70,7 @@ class E2EMessageExchangeTest {
             crypto,
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default)
         )
-        val bobFriendRepo = FriendRepositoryImpl(FriendsApi(bobClient), bobDb, backgroundScope)
+        val bobFriendRepo = FriendRepositoryImpl(FriendsApi(bobClient), KeysApi(bobClient), bobDb, backgroundScope)
         val bobLocationRepo = LocationRepositoryImpl(
             LocationApi(bobClient),
             KeysApi(bobClient),
@@ -91,8 +91,6 @@ class E2EMessageExchangeTest {
 
         val aliceId =
             aliceAuthRepo.authState.value.let { (it as com.ruirui.findme.repository.AuthState.Authenticated).userId }
-        val bobId =
-            bobAuthRepo.authState.value.let { (it as com.ruirui.findme.repository.AuthState.Authenticated).userId }
 
         // We no longer need to re-create clients, since HttpClientFactory's Auth plugin dynamically injects the tokens!
         val aliceFriendRepoReal = aliceFriendRepo
@@ -105,7 +103,7 @@ class E2EMessageExchangeTest {
         bobFriendRepoReal.syncFriends().getOrThrow()
 
         // Bob accepts Alice's request
-        bobFriendRepoReal.acceptFriendRequest("alice", aliceId).getOrThrow()
+        bobFriendRepoReal.acceptFriendRequest(aliceId).getOrThrow()
 
         // Alice syncs to see Bob is a friend
         aliceFriendRepoReal.syncFriends().getOrThrow()

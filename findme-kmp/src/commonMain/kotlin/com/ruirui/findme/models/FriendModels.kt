@@ -13,8 +13,13 @@ enum class RequestDirection {
 
 @Serializable
 data class FriendDto(
+    @SerialName("user_id")
     val userId: String,
-    val username: String = ""
+    val username: String = "",
+    @SerialName("identity_key_dh")
+    val identityKeyDh: String = "",
+    @SerialName("identity_key_sign")
+    val identityKeySign: String = ""
 )
 
 /**
@@ -28,11 +33,3 @@ data class FriendRequest(
     val direction: RequestDirection = RequestDirection.INBOUND
 )
 
-/**
- * Payload sent by a user to accept a pending friend request from a requester UUID.
- */
-@Serializable
-data class FriendAcceptPayload(
-    @SerialName("requester_id")
-    val requesterId: String
-)

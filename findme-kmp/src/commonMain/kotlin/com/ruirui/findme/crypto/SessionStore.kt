@@ -25,6 +25,11 @@ interface SessionStore {
      * ensuring the latest KDF chain keys are securely stored.
      */
     suspend fun saveSession(remoteUserId: String, session: DoubleRatchetSession)
+
+    /**
+     * Deletes the stored session state for the given [remoteUserId].
+     */
+    suspend fun deleteSession(remoteUserId: String)
 }
 
 class SessionStoreImpl(
@@ -60,4 +65,7 @@ class SessionStoreImpl(
         secureStorage.putString(SecureStorageKeys.ratchetState(remoteUserId), jsonString)
     }
 
+    override suspend fun deleteSession(remoteUserId: String) {
+        secureStorage.remove(SecureStorageKeys.ratchetState(remoteUserId))
+    }
 }

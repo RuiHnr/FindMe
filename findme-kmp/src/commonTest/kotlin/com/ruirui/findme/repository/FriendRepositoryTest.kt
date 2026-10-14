@@ -1,13 +1,16 @@
 package com.ruirui.findme.repository
 
 import com.ruirui.findme.fakes.FakeBackend
+import com.ruirui.findme.models.SignedPreKeyDto
+import com.ruirui.findme.models.UploadKeysRequest
 import com.ruirui.findme.network.api.FriendsApi
+import com.ruirui.findme.network.api.KeysApi
 import com.ruirui.findme.storage.InMemorySecureStorage
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.assertNotNull
 
 class FriendRepositoryTest {
 
@@ -23,7 +26,7 @@ class FriendRepositoryTest {
         )
 
         val db = com.ruirui.findme.db.createTestDatabase()
-        val repo = FriendRepositoryImpl(FriendsApi(client), db, backgroundScope)
+        val repo = FriendRepositoryImpl(FriendsApi(client), KeysApi(client), db, backgroundScope)
 
         // Add fake data
         backend.friendsBackend.requestFriend("bob", "alice_id")
@@ -35,7 +38,7 @@ class FriendRepositoryTest {
 
         val requests = repo.friendRequests.first { it.isNotEmpty() }
         assertEquals(1, requests.size)
-        assertEquals("bob", requests[0].targetUsername)
+        assertEquals("bob", requests[0].userId)
     }
 
     @Test
@@ -50,13 +53,22 @@ class FriendRepositoryTest {
         )
 
         val db = com.ruirui.findme.db.createTestDatabase()
-        val repo = FriendRepositoryImpl(FriendsApi(client), db, backgroundScope)
+        val repo = FriendRepositoryImpl(FriendsApi(client), KeysApi(client), db, backgroundScope)
+
+        // Seed keys for bob_id in backend so getPreKeyBundle succeeds
+        backend.keysBackend.uploadKeys(
+            "bob_id",
+            UploadKeysRequest(
+                signedPreKey = SignedPreKeyDto(1, "bob_spk_pub", "signature")
+            )
+        )
 
         // Accept
-        repo.acceptFriendRequest("bob", "bob_id").getOrThrow()
+        repo.acceptFriendRequest("bob_id").getOrThrow()
         testScheduler.advanceUntilIdle()
 
-        // It shouldn't crash, and should sync
-        assertTrue(true)
+        // Verify identity pin was saved
+        val pin = db.identityPinQueries.getPin("bob_id").executeAsOneOrNull()
+        assertNotNull(pin, "Identity pin should be saved on accepting friend request")
     }
 }
