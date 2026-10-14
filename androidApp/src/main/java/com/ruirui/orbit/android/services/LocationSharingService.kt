@@ -1,6 +1,7 @@
-package com.ruirui.orbit.location
+package com.ruirui.orbit.android.services
 
 import android.Manifest
+import android.R
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
@@ -17,7 +18,7 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import com.ruirui.orbit.app.OrbitApp
+import com.ruirui.orbit.android.app.OrbitApp
 import com.ruirui.orbit.repository.LocationRepository
 import com.ruirui.orbit.sync.SyncOrchestrator
 import kotlinx.coroutines.CoroutineScope
@@ -66,21 +67,24 @@ class LocationSharingService : Service() {
         val targetMode = if (forcedMode == "HIGH") Mode.HIGH else Mode.LOW
 
         if (targetMode != currentMode || locationCallback == null) {
-            startLocationUpdates(targetMode);
+            startLocationUpdates(targetMode)
         }
 
         return START_STICKY
     }
 
     private fun startForegroundNotification() {
-        val channel = NotificationChannel(CHANNEL_ID, "Orbit Location Sharing",
-            NotificationManager.IMPORTANCE_LOW)
-        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            CHANNEL_ID, "Orbit Location Sharing",
+            NotificationManager.IMPORTANCE_LOW
+        )
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        notificationManager.createNotificationChannel(channel)
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Orbit is sharing your location")
-            .setContentTitle("Your friends can see where you are")
-            .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+            .setContentText("Your friends can see where you are")
+            .setSmallIcon(R.drawable.ic_menu_mylocation)
             .setOngoing(true)
             .build()
         startForeground(NOTIFICATION_ID, notification)
@@ -88,7 +92,7 @@ class LocationSharingService : Service() {
 
     @RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     private fun startLocationUpdates(mode: Mode) {
-        locationCallback?.let { fusedLocationClient.removeLocationUpdates { it } }
+        locationCallback?.let { fusedLocationClient.removeLocationUpdates(it) }
 
         val (priority, interval) = when (mode) {
             Mode.HIGH -> Priority.PRIORITY_HIGH_ACCURACY to HIGH_INTERVAL_MS

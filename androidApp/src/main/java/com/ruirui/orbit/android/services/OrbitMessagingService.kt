@@ -1,14 +1,15 @@
-package com.ruirui.orbit.location
+package com.ruirui.orbit.android.services
 
 import android.content.Intent
 import android.util.Log
+import androidx.core.content.ContextCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import com.ruirui.orbit.android.app.OrbitApp
 import com.ruirui.orbit.models.DeviceToken
-import com.ruirui.orbit.network.api.DeviceApi
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-
 
 /**
  * Service for handling Firebase Cloud Messaging (FCM) push notifications.
@@ -17,12 +18,8 @@ import kotlinx.coroutines.launch
  * 1. Receiving new FCM registration tokens
  * 2. Handling incoming push notifications
  * 3. Triggering location sharing mode changes
- *
- * @property deviceApi Interface for device token registration
  */
-class OrbitMessagingService(
-    private val deviceApi: DeviceApi
-) : FirebaseMessagingService() {
+class OrbitMessagingService : FirebaseMessagingService() {
 
     /**
      * Recognized sync modes for location sharing
@@ -43,12 +40,14 @@ class OrbitMessagingService(
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         // Since Firebase's onNewToken is synchronous, launch a coroutine to send the token
-        CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             try {
-                deviceApi.postTokens(DeviceToken(
-                    fcmToken = token,
-                    apnsToken = null
-                ))
+                OrbitApp.instance.deviceApi?.postTokens(
+                    DeviceToken(
+                        fcmToken = token,
+                        apnsToken = null
+                    )
+                )
             } catch (e: Exception) {
                 Log.e("Orbit", "Failed to send FCM token", e)
             }
@@ -63,11 +62,12 @@ class OrbitMessagingService(
     override fun onMessageReceived(message: RemoteMessage) {
         if (message.data["action"] == "sync") {
             // If it's a sync mode sync notification
-            if (message.data["mode"] == SyncMode.HIGH || message.data["mode"] == SyncMode.LOW) {
+            val mode = message.data["mode"]
+            if (mode == SyncMode.HIGH || mode == SyncMode.LOW) {
                 val intent = Intent(this, LocationSharingService::class.java).apply {
-                    putExtra("mode", message.data["mode"])
+                    putExtra("mode", mode)
                 }
-                startForegroundService(intent)
+                ContextCompat.startForegroundService(this, intent)
             }
         }
     }
