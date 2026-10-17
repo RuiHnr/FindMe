@@ -42,7 +42,7 @@ class OrbitMessagingService : FirebaseMessagingService() {
         // Since Firebase's onNewToken is synchronous, launch a coroutine to send the token
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                OrbitApp.instance.deviceApi?.postTokens(
+                OrbitApp.instance.container.deviceApi.postTokens(
                     DeviceToken(
                         fcmToken = token,
                         apnsToken = null

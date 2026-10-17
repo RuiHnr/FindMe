@@ -124,8 +124,8 @@ class LocationSharingService : Service() {
         }
         lastSentLocation = location
 
-        val repo: LocationRepository = OrbitApp.instance.locationRepository
-        val orchestrator: SyncOrchestrator = OrbitApp.instance.syncOrchestrator
+        val repo: LocationRepository = OrbitApp.instance.container.locationRepository
+        val orchestrator: SyncOrchestrator = OrbitApp.instance.container.syncOrchestrator
 
         serviceScope.launch {
             repo.submitLocalLocation(location.latitude, location.longitude)

@@ -14,10 +14,10 @@ import java.util.concurrent.TimeUnit
 class InboxSyncWorker(
     appContext: Context,
     workerParams: WorkerParameters
-    ) : CoroutineWorker(appContext, workerParams) {
+) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        val orchastrator: SyncOrchestrator = OrbitApp.instance.syncOrchestrator
+        val orchastrator: SyncOrchestrator = OrbitApp.instance.container.syncOrchestrator
 
         return orchastrator.syncAll().fold(
             onSuccess = {
